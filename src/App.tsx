@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
+import { verifyAdmin } from './db';
 
 function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', { email, password });
+    setError('');
+    
+    try {
+      const isValid = await verifyAdmin(email, password);
+      if (isValid) {
+        console.log('Login successful');
+        // Add your redirect or success handling here
+      } else {
+        setError('Invalid email or password');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      console.error('Login error:', err);
+    }
   };
 
   return (
@@ -21,6 +35,12 @@ function App() {
         </div>
         
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">Welcome back</h1>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
