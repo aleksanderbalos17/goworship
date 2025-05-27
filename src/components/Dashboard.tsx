@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Book, Bible, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut } from 'lucide-react';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
