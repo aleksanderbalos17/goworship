@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2 } from 'lucide-react';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
 import { Churches } from './Churches';
+import { Denominations } from './Denominations';
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export function Dashboard({ onLogout }: DashboardProps) {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'books' | 'bibles' | 'churches' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'settings'>('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
 
@@ -29,6 +30,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
         return <Bibles />;
       case 'churches':
         return <Churches />;
+      case 'denominations':
+        return <Denominations />;
       case 'dashboard':
         return (
           <div className="p-8">
@@ -144,6 +147,19 @@ export function Dashboard({ onLogout }: DashboardProps) {
               >
                 <Church className="w-5 h-5" />
                 <span>Churches</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setCurrentPage('denominations')}
+                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'denominations'
+                    ? 'text-indigo-600 bg-indigo-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Building2 className="w-5 h-5" />
+                <span>Denominations</span>
               </button>
             </li>
             <li>
