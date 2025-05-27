@@ -1,6 +1,31 @@
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
 
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  fcm_token: string | null;
+  social_facebook_id: string | null;
+  social_google_id: string | null;
+  social_apple_id: string | null;
+  login_enabled: string;
+  location_latitude: string;
+  location_longitude: string;
+  last_onlineAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface LoginResponse {
+  status: string;
+  message: string;
+  data: {
+    user: User;
+  };
+}
+
 function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,7 +36,7 @@ function App() {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:8080/api/login', {
+      const response = await fetch('http://localhost:8080/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -19,11 +44,15 @@ function App() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        console.log('Login successful');
-        // Add your redirect or success handling here
+      const data: LoginResponse = await response.json();
+
+      if (data.status === 'success') {
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+        console.log('Login successful:', data.data.user);
+        // You can add navigation logic here
       } else {
-        setError('Invalid email or password');
+        setError(data.message || 'Invalid email or password');
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
