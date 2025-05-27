@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
+import { Dashboard } from './components/Dashboard';
 
 interface Admin {
   id: string;
@@ -13,6 +14,14 @@ function App() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const admin = localStorage.getItem('admin');
+    if (admin) {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,13 +39,24 @@ function App() {
         updatedAt: null
       };
       localStorage.setItem('admin', JSON.stringify(mockAdmin));
-      console.log('Login successful');
+      setIsAuthenticated(true);
     } else {
       setError('Invalid email or password');
     }
     
     setIsLoading(false);
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin');
+    setIsAuthenticated(false);
+    setEmail('');
+    setPassword('');
+  };
+
+  if (isAuthenticated) {
+    return <Dashboard onLogout={handleLogout} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
