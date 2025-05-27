@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown, CalendarDays, Menu, X } from 'lucide-react';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
@@ -21,6 +21,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
   const [booksMenuOpen, setBooksMenuOpen] = useState(false);
   const [churchesMenuOpen, setChurchesMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
 
   const handleLogout = () => {
@@ -90,17 +91,28 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar Toggle Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 lg:hidden"
+      >
+        {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg flex flex-col">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">GoWorship</h2>
           <p className="text-sm text-gray-500 mt-1">{admin.email}</p>
         </div>
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             <li>
               <button
-                onClick={() => setCurrentPage('dashboard')}
+                onClick={() => {
+                  setCurrentPage('dashboard');
+                  setSidebarOpen(false);
+                }}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'dashboard'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -113,7 +125,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => setCurrentPage('events')}
+                onClick={() => {
+                  setCurrentPage('events');
+                  setSidebarOpen(false);
+                }}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'events'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -126,7 +141,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => setCurrentPage('users')}
+                onClick={() => {
+                  setCurrentPage('users');
+                  setSidebarOpen(false);
+                }}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'users'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -156,7 +174,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => setCurrentPage('books')}
+                      onClick={() => {
+                        setCurrentPage('books');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'books'
                           ? 'text-indigo-600'
@@ -168,7 +189,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => setCurrentPage('bibles')}
+                      onClick={() => {
+                        setCurrentPage('bibles');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'bibles'
                           ? 'text-indigo-600'
@@ -200,7 +224,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => setCurrentPage('churches')}
+                      onClick={() => {
+                        setCurrentPage('churches');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'churches'
                           ? 'text-indigo-600'
@@ -212,7 +239,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => setCurrentPage('denominations')}
+                      onClick={() => {
+                        setCurrentPage('denominations');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'denominations'
                           ? 'text-indigo-600'
@@ -244,7 +274,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => setCurrentPage('event-types')}
+                      onClick={() => {
+                        setCurrentPage('event-types');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'event-types'
                           ? 'text-indigo-600'
@@ -256,7 +289,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => setCurrentPage('event-frequencies')}
+                      onClick={() => {
+                        setCurrentPage('event-frequencies');
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'event-frequencies'
                           ? 'text-indigo-600'
@@ -271,7 +307,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => setCurrentPage('settings')}
+                onClick={() => {
+                  setCurrentPage('settings');
+                  setSidebarOpen(false);
+                }}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'settings'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -296,7 +335,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {renderContent()}
       </div>
 
@@ -322,6 +361,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
       )}
     </div>
   );
