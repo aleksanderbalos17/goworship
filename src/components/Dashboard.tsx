@@ -18,6 +18,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
   >('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
+  const [booksMenuOpen, setBooksMenuOpen] = useState(false);
+  const [churchesMenuOpen, setChurchesMenuOpen] = useState(false);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
 
   const handleLogout = () => {
@@ -119,57 +121,93 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <span>Users</span>
               </button>
             </li>
-            <li>
+            <li className="relative">
               <button
-                onClick={() => setCurrentPage('books')}
-                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'books'
+                onClick={() => setBooksMenuOpen(!booksMenuOpen)}
+                className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'books' || currentPage === 'bibles'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Book className="w-5 h-5" />
-                <span>Books</span>
+                <div className="flex items-center space-x-3">
+                  <Book className="w-5 h-5" />
+                  <span>Books</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${booksMenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
+              {booksMenuOpen && (
+                <ul className="pl-12 mt-2 space-y-2">
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('books')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'books'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Books
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('bibles')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'bibles'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Bibles
+                    </button>
+                  </li>
+                </ul>
+              )}
             </li>
-            <li>
+            <li className="relative">
               <button
-                onClick={() => setCurrentPage('bibles')}
-                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'bibles'
+                onClick={() => setChurchesMenuOpen(!churchesMenuOpen)}
+                className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'churches' || currentPage === 'denominations'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Bible className="w-5 h-5" />
-                <span>Bibles</span>
+                <div className="flex items-center space-x-3">
+                  <Church className="w-5 h-5" />
+                  <span>Churches</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${churchesMenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
-            </li>
-            <li>
-              <button
-                onClick={() => setCurrentPage('churches')}
-                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'churches'
-                    ? 'text-indigo-600 bg-indigo-50'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Church className="w-5 h-5" />
-                <span>Churches</span>
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => setCurrentPage('denominations')}
-                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'denominations'
-                    ? 'text-indigo-600 bg-indigo-50'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Building2 className="w-5 h-5" />
-                <span>Denominations</span>
-              </button>
+              {churchesMenuOpen && (
+                <ul className="pl-12 mt-2 space-y-2">
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('churches')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'churches'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Churches
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('denominations')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'denominations'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Denominations
+                    </button>
+                  </li>
+                </ul>
+              )}
             </li>
             <li className="relative">
               <button
