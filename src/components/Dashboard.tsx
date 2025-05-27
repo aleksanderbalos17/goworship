@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown } from 'lucide-react';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
 import { Churches } from './Churches';
 import { Denominations } from './Denominations';
+import { EventTypes } from './EventTypes';
+import { EventFrequencies } from './EventFrequencies';
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export function Dashboard({ onLogout }: DashboardProps) {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<
+    'dashboard' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
+  >('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
 
   const handleLogout = () => {
@@ -32,6 +37,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
         return <Churches />;
       case 'denominations':
         return <Denominations />;
+      case 'event-types':
+        return <EventTypes />;
+      case 'event-frequencies':
+        return <EventFrequencies />;
       case 'dashboard':
         return (
           <div className="p-8">
@@ -161,6 +170,50 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <Building2 className="w-5 h-5" />
                 <span>Denominations</span>
               </button>
+            </li>
+            <li className="relative">
+              <button
+                onClick={() => setEventsMenuOpen(!eventsMenuOpen)}
+                className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'event-types' || currentPage === 'event-frequencies'
+                    ? 'text-indigo-600 bg-indigo-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-5 h-5" />
+                  <span>Events</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${eventsMenuOpen ? 'transform rotate-180' : ''}`} />
+              </button>
+              {eventsMenuOpen && (
+                <ul className="pl-12 mt-2 space-y-2">
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('event-types')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'event-types'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Event Types
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setCurrentPage('event-frequencies')}
+                      className={`w-full text-left py-2 text-sm ${
+                        currentPage === 'event-frequencies'
+                          ? 'text-indigo-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Event Frequencies
+                    </button>
+                  </li>
+                </ul>
+              )}
             </li>
             <li>
               <button
