@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
-import { verifyAdmin } from './db';
 
 function App() {
   const [email, setEmail] = useState('');
@@ -12,8 +11,15 @@ function App() {
     setError('');
     
     try {
-      const isValid = await verifyAdmin(email, password);
-      if (isValid) {
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
         console.log('Login successful');
         // Add your redirect or success handling here
       } else {
