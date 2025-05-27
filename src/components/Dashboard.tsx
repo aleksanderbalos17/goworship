@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Music, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Bible, Settings, LogOut } from 'lucide-react';
 import { Users as UsersPage } from './Users';
+import { Books } from './Books';
+import { Bibles } from './Bibles';
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export function Dashboard({ onLogout }: DashboardProps) {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'songs' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'books' | 'bibles' | 'settings'>('dashboard');
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
 
   const renderContent = () => {
     switch (currentPage) {
       case 'users':
         return <UsersPage />;
+      case 'books':
+        return <Books />;
+      case 'bibles':
+        return <Bibles />;
       case 'dashboard':
         return (
           <div className="p-8">
@@ -24,14 +30,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <p className="text-sm text-gray-500 mt-2">+12% from last month</p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Songs</h3>
-                <p className="text-3xl font-bold text-indigo-600">567</p>
-                <p className="text-sm text-gray-500 mt-2">+5% from last month</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Books</h3>
+                <p className="text-3xl font-bold text-indigo-600">66</p>
+                <p className="text-sm text-gray-500 mt-2">Complete Bible Books</p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Active Sessions</h3>
-                <p className="text-3xl font-bold text-indigo-600">89</p>
-                <p className="text-sm text-gray-500 mt-2">Current active users</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Verses</h3>
+                <p className="text-3xl font-bold text-indigo-600">31,102</p>
+                <p className="text-sm text-gray-500 mt-2">Bible Verses</p>
               </div>
             </div>
 
@@ -41,7 +47,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex items-center justify-between py-3 border-b last:border-0">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">New song added: "Amazing Grace"</p>
+                      <p className="text-sm font-medium text-gray-800">New verse added: Genesis 1:{i}</p>
                       <p className="text-xs text-gray-500">2 hours ago</p>
                     </div>
                     <span className="text-xs text-indigo-600 font-medium">View</span>
@@ -94,15 +100,28 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => setCurrentPage('songs')}
+                onClick={() => setCurrentPage('books')}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'songs'
+                  currentPage === 'books'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <Music className="w-5 h-5" />
-                <span>Songs</span>
+                <Book className="w-5 h-5" />
+                <span>Books</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setCurrentPage('bibles')}
+                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'bibles'
+                    ? 'text-indigo-600 bg-indigo-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Bible className="w-5 h-5" />
+                <span>Bibles</span>
               </button>
             </li>
             <li>
