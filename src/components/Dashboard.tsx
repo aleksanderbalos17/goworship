@@ -94,13 +94,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
       {/* Sidebar Toggle Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50"
+        className="fixed top-4 left-4 z-20 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50"
       >
         {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">GoWorship</h2>
           <p className="text-sm text-gray-500 mt-1">{admin.email}</p>
@@ -305,7 +305,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : ''}`}>
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {renderContent()}
       </div>
 
@@ -336,7 +336,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
