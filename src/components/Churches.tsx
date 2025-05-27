@@ -17,28 +17,87 @@ interface Church {
   updated_at: string | null;
 }
 
+interface DeleteLocationModalProps {
+  churchName: string;
+  location: Location;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteLocationModal({ churchName, location, onClose, onConfirm }: DeleteLocationModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Location</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete this location from {churchName}?
+          <br />
+          <span className="text-sm font-medium mt-2 block">{location.address}</span>
+        </p>
+        <div className="flex space-x-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Churches() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedChurch, setExpandedChurch] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ church: Church; location: Location } | null>(null);
   
   // Mock data with multiple locations
-  const mockChurches: Church[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `${i + 1}`,
-    name: `Church ${i + 1}`,
-    photo: `https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=300`,
-    locations: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
-      id: `${i}-${j}`,
-      address: `${123 + j} Church Street, ${['London', 'Manchester', 'Birmingham'][j % 3]}, UK`,
-      latitude: 51.5074 + (Math.random() * 0.1),
-      longitude: -0.1278 + (Math.random() * 0.1),
-    })),
-    created_at: '2024-03-21 14:30:00',
-    updated_at: i % 3 === 0 ? '2024-03-22 09:15:00' : null
-  }));
+  const [churches, setChurches] = useState<Church[]>(
+    Array.from({ length: 50 }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `Church ${i + 1}`,
+      photo: `https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=300`,
+      locations: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
+        id: `${i}-${j}`,
+        address: `${123 + j} Church Street, ${['London', 'Manchester', 'Birmingham'][j % 3]}, UK`,
+        latitude: 51.5074 + (Math.random() * 0.1),
+        longitude: -0.1278 + (Math.random() * 0.1),
+      })),
+      created_at: '2024-03-21 14:30:00',
+      updated_at: i % 3 === 0 ? '2024-03-22 09:15:00' : null
+    }))
+  );
+
+  const handleDeleteLocation = (church: Church, location: Location) => {
+    setSelectedLocation({ church, location });
+  };
+
+  const handleDeleteLocationConfirm = () => {
+    if (selectedLocation) {
+      const { church, location } = selectedLocation;
+      setChurches(churches.map(c => {
+        if (c.id === church.id) {
+          return {
+            ...c,
+            locations: c.locations.filter(l => l.id !== location.id)
+          };
+        }
+        return c;
+      }));
+      setSelectedLocation(null);
+    }
+  };
 
   const itemsPerPage = 10;
-  const filteredChurches = mockChurches.filter(church => 
+  const filteredChurches = churches.filter(church => 
     church.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     church.locations.some(loc => loc.address.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -130,14 +189,22 @@ export function Churches() {
                     <td colSpan={5} className="px-6 py-4">
                       <div className="space-y-4">
                         {church.locations.map((location) => (
-                          <div key={location.id} className="flex items-start space-x-4 p-4 bg-white rounded-lg shadow-sm">
-                            <MapPin className="w-5 h-5 text-gray-400 mt-1" />
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{location.address}</div>
-                              <div className="text-sm text-gray-500">
-                                Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                          <div key={location.id} className="flex items-start justify-between p-4 bg-white rounded-lg shadow-sm">
+                            <div className="flex items-start space-x-4">
+                              <MapPin className="w-5 h-5 text-gray-400 mt-1" />
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{location.address}</div>
+                                <div className="text-sm text-gray-500">
+                                  Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                                </div>
                               </div>
                             </div>
+                            <button
+                              onClick={() => handleDeleteLocation(church, location)}
+                              className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -212,6 +279,15 @@ export function Churches() {
           </div>
         </div>
       </div>
+
+      {selectedLocation && (
+        <DeleteLocationModal
+          churchName={selectedLocation.church.name}
+          location={selectedLocation.location}
+          onClose={() => setSelectedLocation(null)}
+          onConfirm={handleDeleteLocationConfirm}
+        />
+      )}
     </div>
   );
 }
