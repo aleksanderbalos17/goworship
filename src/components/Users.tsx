@@ -9,21 +9,72 @@ interface User {
   lastLogin: string;
 }
 
+interface StatusModalProps {
+  user: User;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function StatusModal({ user, onClose, onConfirm }: StatusModalProps) {
+  const newStatus = user.status === 'active' ? 'inactive' : 'active';
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Status Change</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to change {user.name}'s status to {newStatus}?
+        </p>
+        <div className="flex space-x-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Mock data
-  const mockUsers: User[] = Array.from({ length: 50 }, (_, i) => ({
-    id: `${i + 1}`,
-    name: `User ${i + 1}`,
-    email: `user${i + 1}@example.com`,
-    status: i % 3 === 0 ? 'inactive' : 'active',
-    lastLogin: '2024-03-21 14:30:00'
-  }));
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>(
+    Array.from({ length: 50 }, (_, i) => ({
+      id: `${i + 1}`,
+      name: `User ${i + 1}`,
+      email: `user${i + 1}@example.com`,
+      status: i % 3 === 0 ? 'inactive' : 'active',
+      lastLogin: '2024-03-21 14:30:00'
+    }))
+  );
+
+  const toggleUserStatus = (user: User) => {
+    setSelectedUser(user);
+  };
+
+  const handleStatusConfirm = () => {
+    if (selectedUser) {
+      setUsers(users.map(user => 
+        user.id === selectedUser.id
+          ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
+          : user
+      ));
+      setSelectedUser(null);
+    }
+  };
 
   const itemsPerPage = 10;
-  const filteredUsers = mockUsers.filter(user => 
+  const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -56,6 +107,7 @@ export function Users() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -78,6 +130,18 @@ export function Users() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {user.lastLogin}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => toggleUserStatus(user)}
+                    className={`px-3 py-1 rounded-md text-white ${
+                      user.status === 'active'
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {user.status === 'active' ? 'Make Inactive' : 'Make Active'}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -147,6 +211,14 @@ export function Users() {
           </div>
         </div>
       </div>
+
+      {selectedUser && (
+        <StatusModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onConfirm={handleStatusConfirm}
+        />
+      )}
     </div>
   );
 }
