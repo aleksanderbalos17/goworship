@@ -10,8 +10,8 @@ interface Admin {
 }
 
 function App() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@goworship.co.uk');
+  const [password, setPassword] = useState('gwadmin123456!');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
