@@ -5,6 +5,9 @@ interface Church {
   id: string;
   name: string;
   photo: string;
+  address: string;
+  latitude: number;
+  longitude: number;
   created_at: string;
   updated_at: string | null;
 }
@@ -18,13 +21,17 @@ export function Churches() {
     id: `${i + 1}`,
     name: `Church ${i + 1}`,
     photo: `https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=300`,
+    address: `${123 + i} Church Street, London, UK`,
+    latitude: 51.5074 + (Math.random() * 0.1),
+    longitude: -0.1278 + (Math.random() * 0.1),
     created_at: '2024-03-21 14:30:00',
     updated_at: i % 3 === 0 ? '2024-03-22 09:15:00' : null
   }));
 
   const itemsPerPage = 10;
   const filteredChurches = mockChurches.filter(church => 
-    church.name.toLowerCase().includes(searchTerm.toLowerCase())
+    church.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    church.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const totalPages = Math.ceil(filteredChurches.length / itemsPerPage);
@@ -53,8 +60,8 @@ export function Churches() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated At</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -70,12 +77,15 @@ export function Churches() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{church.name}</div>
+                  <div className="text-sm text-gray-500">Added: {church.created_at}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {church.created_at}
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">{church.address}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {church.updated_at || '-'}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {church.latitude.toFixed(6)}, {church.longitude.toFixed(6)}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
