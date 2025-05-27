@@ -1,28 +1,18 @@
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
 
-interface User {
+interface Admin {
   id: string;
-  first_name: string;
-  last_name: string;
   email: string;
-  fcm_token: string | null;
-  social_facebook_id: string | null;
-  social_google_id: string | null;
-  social_apple_id: string | null;
-  login_enabled: string;
-  location_latitude: string;
-  location_longitude: string;
-  last_onlineAt: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string | null;
 }
 
 interface LoginResponse {
   status: string;
   message: string;
   data: {
-    user: User;
+    admin: Admin;
   };
 }
 
@@ -47,9 +37,9 @@ function App() {
       const data: LoginResponse = await response.json();
 
       if (data.status === 'success') {
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        console.log('Login successful:', data.data.user);
+        // Store admin data in localStorage
+        localStorage.setItem('admin', JSON.stringify(data.data.admin));
+        console.log('Login successful:', data.data.admin);
         // You can add navigation logic here
       } else {
         setError(data.message || 'Invalid email or password');
@@ -69,7 +59,7 @@ function App() {
           </div>
         </div>
         
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">Welcome back</h1>
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">Admin Login</h1>
         
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
