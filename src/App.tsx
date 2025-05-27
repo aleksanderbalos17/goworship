@@ -63,7 +63,7 @@ function App() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="flex justify-center mb-8">
           <img 
-            src="/goworship-icon.png" 
+            src="/gw-logo.png" 
             alt="GoWorship Logo" 
             className="w-16 h-16"
           />
