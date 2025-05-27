@@ -10,7 +10,13 @@ interface DashboardProps {
 
 export function Dashboard({ onLogout }: DashboardProps) {
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'users' | 'books' | 'bibles' | 'settings'>('dashboard');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+
+  const handleLogout = () => {
+    setShowLogoutModal(false);
+    onLogout();
+  };
 
   const renderContent = () => {
     switch (currentPage) {
@@ -65,12 +71,12 @@ export function Dashboard({ onLogout }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
+      <div className="w-64 bg-white shadow-lg flex flex-col">
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">GoWorship</h2>
           <p className="text-sm text-gray-500 mt-1">{admin.email}</p>
         </div>
-        <nav className="p-4">
+        <nav className="flex-1 p-4">
           <ul className="space-y-2">
             <li>
               <button
@@ -138,20 +144,46 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </button>
             </li>
           </ul>
+        </nav>
+        <div className="p-4 mt-auto border-t">
           <button
-            onClick={onLogout}
-            className="flex items-center space-x-3 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg mt-8 w-full"
+            onClick={() => setShowLogoutModal(true)}
+            className="flex items-center space-x-3 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg w-full"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
           </button>
-        </nav>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1">
         {renderContent()}
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Logout</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
