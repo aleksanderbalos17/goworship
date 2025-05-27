@@ -65,7 +65,7 @@ function App() {
           <img 
             src="/gw-logo.png" 
             alt="GoWorship Logo" 
-            className="w-16 h-16"
+            className="h-16"
           />
         </div>
         
