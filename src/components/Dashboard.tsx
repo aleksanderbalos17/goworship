@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown, CalendarDays } from 'lucide-react';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
@@ -7,6 +7,7 @@ import { Churches } from './Churches';
 import { Denominations } from './Denominations';
 import { EventTypes } from './EventTypes';
 import { EventFrequencies } from './EventFrequencies';
+import { Events } from './Events';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -14,7 +15,7 @@ interface DashboardProps {
 
 export function Dashboard({ onLogout }: DashboardProps) {
   const [currentPage, setCurrentPage] = useState<
-    'dashboard' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
+    'dashboard' | 'events' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
   >('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
@@ -29,6 +30,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   const renderContent = () => {
     switch (currentPage) {
+      case 'events':
+        return <Events />;
       case 'users':
         return <UsersPage />;
       case 'books':
@@ -106,6 +109,19 @@ export function Dashboard({ onLogout }: DashboardProps) {
               >
                 <LayoutDashboard className="w-5 h-5" />
                 <span>Dashboard</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setCurrentPage('events')}
+                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'events'
+                    ? 'text-indigo-600 bg-indigo-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <CalendarDays className="w-5 h-5" />
+                <span>All Events</span>
               </button>
             </li>
             <li>
