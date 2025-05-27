@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+
+interface Location {
+  id: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
 
 interface Church {
   id: string;
   name: string;
   photo: string;
-  address: string;
-  latitude: number;
-  longitude: number;
+  locations: Location[];
   created_at: string;
   updated_at: string | null;
 }
@@ -15,15 +20,19 @@ interface Church {
 export function Churches() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedChurch, setExpandedChurch] = useState<string | null>(null);
   
-  // Mock data
+  // Mock data with multiple locations
   const mockChurches: Church[] = Array.from({ length: 50 }, (_, i) => ({
     id: `${i + 1}`,
     name: `Church ${i + 1}`,
     photo: `https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=300`,
-    address: `${123 + i} Church Street, London, UK`,
-    latitude: 51.5074 + (Math.random() * 0.1),
-    longitude: -0.1278 + (Math.random() * 0.1),
+    locations: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
+      id: `${i}-${j}`,
+      address: `${123 + j} Church Street, ${['London', 'Manchester', 'Birmingham'][j % 3]}, UK`,
+      latitude: 51.5074 + (Math.random() * 0.1),
+      longitude: -0.1278 + (Math.random() * 0.1),
+    })),
     created_at: '2024-03-21 14:30:00',
     updated_at: i % 3 === 0 ? '2024-03-22 09:15:00' : null
   }));
@@ -31,12 +40,16 @@ export function Churches() {
   const itemsPerPage = 10;
   const filteredChurches = mockChurches.filter(church => 
     church.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    church.address.toLowerCase().includes(searchTerm.toLowerCase())
+    church.locations.some(loc => loc.address.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
   const totalPages = Math.ceil(filteredChurches.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedChurches = filteredChurches.slice(startIndex, startIndex + itemsPerPage);
+
+  const toggleExpand = (churchId: string) => {
+    setExpandedChurch(expandedChurch === churchId ? null : churchId);
+  };
 
   return (
     <div className="p-6">
@@ -58,52 +71,80 @@ export function Churches() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="w-8 px-6 py-3"></th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Locations</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedChurches.map((church) => (
-              <tr key={church.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <img 
-                    src={church.photo} 
-                    alt={church.name}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{church.name}</div>
-                  <div className="text-sm text-gray-500">Added: {church.created_at}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{church.address}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {church.latitude.toFixed(6)}, {church.longitude.toFixed(6)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
+              <React.Fragment key={church.id}>
+                <tr className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
                     <button
-                      onClick={() => {}}
-                      className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                      onClick={() => toggleExpand(church.id)}
+                      className="text-gray-500 hover:text-gray-700"
                     >
-                      <Pencil className="w-4 h-4" />
+                      {expandedChurch === church.id ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
                     </button>
-                    <button
-                      onClick={() => {}}
-                      className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <img 
+                      src={church.photo} 
+                      alt={church.name}
+                      className="h-12 w-12 rounded-lg object-cover"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{church.name}</div>
+                    <div className="text-sm text-gray-500">Added: {church.created_at}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{church.locations.length} location(s)</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {}}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {expandedChurch === church.id && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={5} className="px-6 py-4">
+                      <div className="space-y-4">
+                        {church.locations.map((location) => (
+                          <div key={location.id} className="flex items-start space-x-4 p-4 bg-white rounded-lg shadow-sm">
+                            <MapPin className="w-5 h-5 text-gray-400 mt-1" />
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{location.address}</div>
+                              <div className="text-sm text-gray-500">
+                                Coordinates: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
