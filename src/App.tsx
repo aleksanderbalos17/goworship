@@ -8,14 +8,6 @@ interface Admin {
   updatedAt: string | null;
 }
 
-interface LoginResponse {
-  status: string;
-  message: string;
-  data: {
-    admin: Admin;
-  };
-}
-
 function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,29 +19,23 @@ function App() {
     setError('');
     setIsLoading(true);
     
-    try {
-      const response = await fetch('http://localhost:8080/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      const data: LoginResponse = await response.json();
-
-      if (data.status === 'success') {
-        localStorage.setItem('admin', JSON.stringify(data.data.admin));
-        // You can add navigation logic here
-      } else {
-        setError(data.message || 'Invalid email or password');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-      console.error('Login error:', err);
-    } finally {
-      setIsLoading(false);
+    if (email === 'admin@goworship.co.uk' && password === 'gwadmin123456!') {
+      const mockAdmin: Admin = {
+        id: "1",
+        email: "admin@goworship.co.uk",
+        createdAt: "2025-05-21 16:03:51",
+        updatedAt: null
+      };
+      localStorage.setItem('admin', JSON.stringify(mockAdmin));
+      console.log('Login successful');
+    } else {
+      setError('Invalid email or password');
     }
+    
+    setIsLoading(false);
   };
 
   return (
