@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 
 interface Admin {
@@ -62,9 +62,11 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         <div className="flex justify-center mb-8">
-          <div className="bg-indigo-100 p-3 rounded-full">
-            <LogIn className="w-8 h-8 text-indigo-600" />
-          </div>
+          <img 
+            src="/goworship-icon.png" 
+            alt="GoWorship Logo" 
+            className="w-16 h-16"
+          />
         </div>
         
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-8">Admin Login</h1>
