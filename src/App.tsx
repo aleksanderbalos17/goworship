@@ -20,10 +20,12 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     
     try {
       const response = await fetch('http://localhost:8080/api/admin/login', {
@@ -37,9 +39,7 @@ function App() {
       const data: LoginResponse = await response.json();
 
       if (data.status === 'success') {
-        // Store admin data in localStorage
         localStorage.setItem('admin', JSON.stringify(data.data.admin));
-        console.log('Login successful:', data.data.admin);
         // You can add navigation logic here
       } else {
         setError(data.message || 'Invalid email or password');
@@ -47,6 +47,8 @@ function App() {
     } catch (err) {
       setError('An error occurred. Please try again.');
       console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -117,9 +119,10 @@ function App() {
 
           <button
             type="submit"
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+            disabled={isLoading}
+            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign in
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>
