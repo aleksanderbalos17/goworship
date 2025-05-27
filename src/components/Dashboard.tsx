@@ -94,13 +94,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
       {/* Sidebar Toggle Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 lg:hidden"
+        className="fixed top-4 left-4 z-50 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50"
       >
         {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">GoWorship</h2>
           <p className="text-sm text-gray-500 mt-1">{admin.email}</p>
@@ -109,10 +109,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           <ul className="space-y-2">
             <li>
               <button
-                onClick={() => {
-                  setCurrentPage('dashboard');
-                  setSidebarOpen(false);
-                }}
+                onClick={() => setCurrentPage('dashboard')}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'dashboard'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -125,10 +122,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => {
-                  setCurrentPage('events');
-                  setSidebarOpen(false);
-                }}
+                onClick={() => setCurrentPage('events')}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'events'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -141,10 +135,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => {
-                  setCurrentPage('users');
-                  setSidebarOpen(false);
-                }}
+                onClick={() => setCurrentPage('users')}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'users'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -174,10 +165,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('books');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('books')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'books'
                           ? 'text-indigo-600'
@@ -189,10 +177,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('bibles');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('bibles')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'bibles'
                           ? 'text-indigo-600'
@@ -224,10 +209,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('churches');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('churches')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'churches'
                           ? 'text-indigo-600'
@@ -239,10 +221,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('denominations');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('denominations')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'denominations'
                           ? 'text-indigo-600'
@@ -274,10 +253,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('event-types');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('event-types')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'event-types'
                           ? 'text-indigo-600'
@@ -289,10 +265,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                   <li>
                     <button
-                      onClick={() => {
-                        setCurrentPage('event-frequencies');
-                        setSidebarOpen(false);
-                      }}
+                      onClick={() => setCurrentPage('event-frequencies')}
                       className={`w-full text-left py-2 text-sm ${
                         currentPage === 'event-frequencies'
                           ? 'text-indigo-600'
@@ -307,10 +280,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li>
               <button
-                onClick={() => {
-                  setCurrentPage('settings');
-                  setSidebarOpen(false);
-                }}
+                onClick={() => setCurrentPage('settings')}
                 className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
                   currentPage === 'settings'
                     ? 'text-indigo-600 bg-indigo-50'
@@ -335,7 +305,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : ''}`}>
         {renderContent()}
       </div>
 
