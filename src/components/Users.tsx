@@ -134,10 +134,10 @@ export function Users() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     onClick={() => toggleUserStatus(user)}
-                    className={`p-2 rounded-full ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       user.status === 'active'
-                        ? 'text-red-600 hover:bg-red-50'
-                        : 'text-green-600 hover:bg-green-50'
+                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                        : 'bg-green-100 text-green-600 hover:bg-green-200'
                     }`}
                   >
                     {user.status === 'active' ? (
