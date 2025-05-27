@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -134,13 +134,17 @@ export function Users() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     onClick={() => toggleUserStatus(user)}
-                    className={`px-3 py-1 rounded-md text-white ${
+                    className={`p-2 rounded-full ${
                       user.status === 'active'
-                        ? 'bg-red-600 hover:bg-red-700'
-                        : 'bg-green-600 hover:bg-green-700'
+                        ? 'text-red-600 hover:bg-red-50'
+                        : 'text-green-600 hover:bg-green-50'
                     }`}
                   >
-                    {user.status === 'active' ? 'Make Inactive' : 'Make Active'}
+                    {user.status === 'active' ? (
+                      <X className="w-5 h-5" />
+                    ) : (
+                      <Check className="w-5 h-5" />
+                    )}
                   </button>
                 </td>
               </tr>
