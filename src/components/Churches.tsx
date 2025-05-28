@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, ChevronDown, ChevronUp, MapPin, Users } from 'lucide-react';
 
-interface Location {
+interface Speaker {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface EventLocation {
   id: string;
   address: string;
   latitude: number;
@@ -12,14 +18,19 @@ interface Church {
   id: string;
   name: string;
   photo: string;
-  locations: Location[];
+  denomination: string;
+  speakers: Speaker[];
+  address: string;
+  latitude: number;
+  longitude: number;
+  eventLocations: EventLocation[];
   created_at: string;
   updated_at: string | null;
 }
 
 interface DeleteLocationModalProps {
   churchName: string;
-  location: Location;
+  location: EventLocation;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -28,9 +39,9 @@ function DeleteLocationModal({ churchName, location, onClose, onConfirm }: Delet
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Location</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Event Location</h3>
         <p className="text-gray-600 mb-6">
-          Are you sure you want to delete this location from {churchName}?
+          Are you sure you want to delete this event location from {churchName}?
           <br />
           <span className="text-sm font-medium mt-2 block">{location.address}</span>
         </p>
@@ -57,17 +68,25 @@ export function Churches() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedChurch, setExpandedChurch] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<{ church: Church; location: Location } | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ church: Church; location: EventLocation } | null>(null);
   
-  // Mock data with multiple locations
   const [churches, setChurches] = useState<Church[]>(
     Array.from({ length: 50 }, (_, i) => ({
       id: `${i + 1}`,
       name: `Church ${i + 1}`,
       photo: `https://images.pexels.com/photos/208736/pexels-photo-208736.jpeg?auto=compress&cs=tinysrgb&w=300`,
-      locations: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
+      denomination: ['Anglican', 'Catholic', 'Methodist', 'Baptist'][i % 4],
+      speakers: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
         id: `${i}-${j}`,
-        address: `${123 + j} Church Street, ${['London', 'Manchester', 'Birmingham'][j % 3]}, UK`,
+        name: `Speaker ${j + 1}`,
+        role: ['Pastor', 'Minister', 'Reverend', 'Priest'][j % 4]
+      })),
+      address: `${100 + i} Main Street, ${['London', 'Manchester', 'Birmingham'][i % 3]}, UK`,
+      latitude: 51.5074 + (Math.random() * 0.1),
+      longitude: -0.1278 + (Math.random() * 0.1),
+      eventLocations: Array.from({ length: Math.floor(Math.random() * 3) + 1 }, (_, j) => ({
+        id: `${i}-${j}`,
+        address: `${123 + j} Church Street, ${['Leeds', 'Bristol', 'Liverpool'][j % 3]}, UK`,
         latitude: 51.5074 + (Math.random() * 0.1),
         longitude: -0.1278 + (Math.random() * 0.1),
       })),
@@ -76,7 +95,7 @@ export function Churches() {
     }))
   );
 
-  const handleDeleteLocation = (church: Church, location: Location) => {
+  const handleDeleteLocation = (church: Church, location: EventLocation) => {
     setSelectedLocation({ church, location });
   };
 
@@ -87,7 +106,7 @@ export function Churches() {
         if (c.id === church.id) {
           return {
             ...c,
-            locations: c.locations.filter(l => l.id !== location.id)
+            eventLocations: c.eventLocations.filter(l => l.id !== location.id)
           };
         }
         return c;
@@ -99,7 +118,9 @@ export function Churches() {
   const itemsPerPage = 10;
   const filteredChurches = churches.filter(church => 
     church.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    church.locations.some(loc => loc.address.toLowerCase().includes(searchTerm.toLowerCase()))
+    church.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    church.denomination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    church.eventLocations.some(loc => loc.address.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
   const totalPages = Math.ceil(filteredChurches.length / itemsPerPage);
@@ -132,8 +153,10 @@ export function Churches() {
             <tr>
               <th className="w-8 px-6 py-3"></th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Locations</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speakers</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Locations</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -162,10 +185,30 @@ export function Churches() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{church.name}</div>
-                    <div className="text-sm text-gray-500">Added: {church.created_at}</div>
+                    <div className="text-sm text-gray-500">{church.denomination}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{church.locations.length} location(s)</div>
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-5 h-5 text-gray-400" />
+                      <div className="text-sm text-gray-900">
+                        {church.speakers.map((speaker, index) => (
+                          <div key={speaker.id}>
+                            {speaker.name}
+                            <span className="text-gray-500"> • {speaker.role}</span>
+                            {index < church.speakers.length - 1 && <br />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{church.address}</div>
+                    <div className="text-sm text-gray-500">
+                      {church.latitude.toFixed(6)}, {church.longitude.toFixed(6)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{church.eventLocations.length} location(s)</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex space-x-2">
@@ -186,9 +229,10 @@ export function Churches() {
                 </tr>
                 {expandedChurch === church.id && (
                   <tr className="bg-gray-50">
-                    <td colSpan={5} className="px-6 py-4">
+                    <td colSpan={7} className="px-6 py-4">
                       <div className="space-y-4">
-                        {church.locations.map((location) => (
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Event Locations</h4>
+                        {church.eventLocations.map((location) => (
                           <div key={location.id} className="flex items-start justify-between p-4 bg-white rounded-lg shadow-sm">
                             <div className="flex items-start space-x-4">
                               <MapPin className="w-5 h-5 text-gray-400 mt-1" />
