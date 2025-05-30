@@ -75,7 +75,7 @@ export function EventFrequencies() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>('/api/admin/event-frequencies', {
+      const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/event-frequencies', {
         params: {
           page,
           per_page: 10
