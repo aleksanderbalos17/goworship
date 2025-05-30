@@ -190,8 +190,6 @@ export function Users() {
           'Accept': 'application/json'
         }
       });
-      
-      // Update local state
       setUsers(users.map(user => 
         user.id === selectedUsernameReview.id
           ? { ...user, username_approved: "1" }
@@ -216,8 +214,6 @@ export function Users() {
           'Accept': 'application/json'
         }
       });
-      
-      // Update local state
       setUsers(users.map(user => 
         user.id === selectedUsernameReview.id
           ? { ...user, username_approved: "2" }
