@@ -498,5 +498,3 @@ export function EventTypes() {
     </div>
   );
 }
-
-export { EventTypes }
