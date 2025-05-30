@@ -33,6 +33,13 @@ interface DeleteModalProps {
   isDeleting: boolean;
 }
 
+interface EditModalProps {
+  eventType: EventType;
+  onClose: () => void;
+  onConfirm: (name: string) => Promise<void>;
+  isSubmitting: boolean;
+}
+
 interface AddModalProps {
   onClose: () => void;
   onConfirm: (name: string) => void;
@@ -63,6 +70,64 @@ function DeleteModal({ eventType, onClose, onConfirm, isDeleting }: DeleteModalP
             {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EditModal({ eventType, onClose, onConfirm, isSubmitting }: EditModalProps) {
+  const [name, setName] = useState(eventType.name);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Event type name is required');
+      return;
+    }
+    await onConfirm(name);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Event Type</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError('');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter event type name"
+            />
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+          </div>
+          <div className="flex space-x-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -130,6 +195,7 @@ export function EventTypes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
+  const [editingEventType, setEditingEventType] = useState<EventType | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -158,6 +224,35 @@ export function EventTypes() {
   useEffect(() => {
     fetchEventTypes(currentPage);
   }, [currentPage]);
+
+  const handleEdit = (eventType: EventType) => {
+    setEditingEventType(eventType);
+  };
+
+  const handleEditConfirm = async (name: string) => {
+    if (editingEventType) {
+      try {
+        setIsSubmitting(true);
+        await axios.put(
+          `http://localhost:8080/api/admin/event-types/${editingEventType.id}`,
+          { name },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          }
+        );
+        await fetchEventTypes(currentPage);
+        setEditingEventType(null);
+      } catch (err) {
+        console.error('Error updating event type:', err);
+        setError('Failed to update event type. Please try again later.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
 
   const handleDelete = (eventType: EventType) => {
     setSelectedEventType(eventType);
@@ -287,7 +382,7 @@ export function EventTypes() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => {}}
+                      onClick={() => handleEdit(eventType)}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                     >
                       <Pencil className="w-4 h-4" />
@@ -377,6 +472,15 @@ export function EventTypes() {
           onClose={() => setSelectedEventType(null)}
           onConfirm={handleDeleteConfirm}
           isDeleting={isDeleting}
+        />
+      )}
+
+      {editingEventType && (
+        <EditModal
+          eventType={editingEventType}
+          onClose={() => setEditingEventType(null)}
+          onConfirm={handleEditConfirm}
+          isSubmitting={isSubmitting}
         />
       )}
 
