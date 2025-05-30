@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
 import axios from 'axios';
 
 interface EventType {
@@ -32,6 +32,12 @@ interface DeleteModalProps {
   onConfirm: () => void;
 }
 
+interface AddModalProps {
+  onClose: () => void;
+  onConfirm: (name: string) => void;
+  isSubmitting: boolean;
+}
+
 function DeleteModal({ eventType, onClose, onConfirm }: DeleteModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -59,10 +65,70 @@ function DeleteModal({ eventType, onClose, onConfirm }: DeleteModalProps) {
   );
 }
 
+function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Event type name is required');
+      return;
+    }
+    onConfirm(name);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Event Type</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError('');
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Enter event type name"
+            />
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+          </div>
+          <div className="flex space-x-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Adding...' : 'Add'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function EventTypes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,6 +167,30 @@ export function EventTypes() {
     }
   };
 
+  const handleAddEventType = async (name: string) => {
+    try {
+      setIsSubmitting(true);
+      const response = await axios.post('http://localhost:8080/api/admin/event-types', {
+        name: name
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.data.status === 'success') {
+        fetchEventTypes(currentPage);
+        setShowAddModal(false);
+      }
+    } catch (err) {
+      console.error('Error adding event type:', err);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredEventTypes = eventTypes.filter(eventType => 
     eventType.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -135,15 +225,24 @@ export function EventTypes() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Event Types</h1>
-        <div className="relative">
-          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search event types..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
-          />
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search event types..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
+            />
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Event Type</span>
+          </button>
         </div>
       </div>
 
@@ -261,6 +360,14 @@ export function EventTypes() {
           eventType={selectedEventType}
           onClose={() => setSelectedEventType(null)}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {showAddModal && (
+        <AddModal
+          onClose={() => setShowAddModal(false)}
+          onConfirm={handleAddEventType}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
