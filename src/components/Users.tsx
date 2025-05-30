@@ -185,7 +185,7 @@ export function Users() {
     
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/approve-username`, null, {
+      await axios.put(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/approve-username`, null, {
         headers: {
           'Accept': 'application/json'
         }
@@ -209,7 +209,7 @@ export function Users() {
     
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/decline-username`, null, {
+      await axios.put(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/decline-username`, null, {
         headers: {
           'Accept': 'application/json'
         }
