@@ -1,14 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Check, X } from 'lucide-react';
+import axios from 'axios';
 
 interface EventFrequency {
   id: string;
   name: string;
-  active: boolean;
+  active: string;
   synonyms: string;
-  showme: boolean;
+  showme: string;
   created_at: string;
   updated_at: string | null;
+}
+
+interface PaginationData {
+  current_page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+  has_next_page: boolean;
+  has_prev_page: boolean;
+}
+
+interface ApiResponse {
+  status: string;
+  data: {
+    frequencies: EventFrequency[];
+    pagination: PaginationData;
+  };
 }
 
 interface DeleteModalProps {
@@ -48,50 +66,107 @@ export function EventFrequencies() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEventFrequency, setSelectedEventFrequency] = useState<EventFrequency | null>(null);
-  const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>(
-    Array.from({ length: 50 }, (_, i) => ({
-      id: `${i + 1}`,
-      name: `Event Frequency ${i + 1}`,
-      active: i % 2 === 0,
-      synonyms: `synonym1, synonym2, synonym${i + 1}`,
-      showme: i % 3 === 0,
-      created_at: '2024-03-21 14:30:00',
-      updated_at: i % 3 === 0 ? '2024-03-22 09:15:00' : null
-    }))
-  );
+  const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
+  const [pagination, setPagination] = useState<PaginationData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDelete = (eventFrequency: EventFrequency) => {
-    setSelectedEventFrequency(eventFrequency);
+  const fetchEventFrequencies = async (page: number) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.get<ApiResponse>(
+        `http://localhost:8080/api/admin/event-frequencies`,
+        {
+          params: {
+            page,
+            per_page: 10,
+            search: searchTerm,
+            sort_by: 'created_at',
+            sort_order: 'DESC'
+          },
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      );
+      setEventFrequencies(response.data.data.frequencies);
+      setPagination(response.data.data.pagination);
+    } catch (err) {
+      setError('Failed to fetch event frequencies. Please try again later.');
+      console.error('Error fetching event frequencies:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchEventFrequencies(currentPage);
+  }, [currentPage, searchTerm]);
 
   const handleDeleteConfirm = () => {
     if (selectedEventFrequency) {
+      // Implement delete API call here
       setEventFrequencies(eventFrequencies.filter(ef => ef.id !== selectedEventFrequency.id));
       setSelectedEventFrequency(null);
     }
   };
 
-  const toggleActive = (id: string) => {
-    setEventFrequencies(eventFrequencies.map(ef =>
-      ef.id === id ? { ...ef, active: !ef.active } : ef
-    ));
+  const toggleActive = async (id: string) => {
+    const frequency = eventFrequencies.find(ef => ef.id === id);
+    if (frequency) {
+      try {
+        // Implement toggle active API call here
+        setEventFrequencies(eventFrequencies.map(ef =>
+          ef.id === id ? { ...ef, active: ef.active === "1" ? "0" : "1" } : ef
+        ));
+      } catch (err) {
+        console.error('Error toggling active status:', err);
+        setError('Failed to update status. Please try again later.');
+      }
+    }
   };
 
-  const toggleShowme = (id: string) => {
-    setEventFrequencies(eventFrequencies.map(ef =>
-      ef.id === id ? { ...ef, showme: !ef.showme } : ef
-    ));
+  const toggleShowme = async (id: string) => {
+    const frequency = eventFrequencies.find(ef => ef.id === id);
+    if (frequency) {
+      try {
+        // Implement toggle showme API call here
+        setEventFrequencies(eventFrequencies.map(ef =>
+          ef.id === id ? { ...ef, showme: ef.showme === "1" ? "0" : "1" } : ef
+        ));
+      } catch (err) {
+        console.error('Error toggling showme status:', err);
+        setError('Failed to update status. Please try again later.');
+      }
+    }
   };
 
-  const itemsPerPage = 10;
-  const filteredEventFrequencies = eventFrequencies.filter(eventFrequency => 
-    eventFrequency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eventFrequency.synonyms.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
-  const totalPages = Math.ceil(filteredEventFrequencies.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedEventFrequencies = filteredEventFrequencies.slice(startIndex, startIndex + itemsPerPage);
+  if (isLoading && !eventFrequencies.length) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">Event Frequencies</h1>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">Event Frequencies</h1>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -101,7 +176,7 @@ export function EventFrequencies() {
           <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search event frequencies..."
+            placeholder="Search frequencies..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
@@ -121,7 +196,7 @@ export function EventFrequencies() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedEventFrequencies.map((eventFrequency) => (
+            {eventFrequencies.map((eventFrequency) => (
               <tr key={eventFrequency.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{eventFrequency.name}</div>
@@ -133,24 +208,24 @@ export function EventFrequencies() {
                   <button
                     onClick={() => toggleActive(eventFrequency.id)}
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      eventFrequency.active
+                      eventFrequency.active === "1"
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
                         : 'bg-red-100 text-red-600 hover:bg-red-200'
                     }`}
                   >
-                    {eventFrequency.active ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {eventFrequency.active === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
                     onClick={() => toggleShowme(eventFrequency.id)}
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      eventFrequency.showme
+                      eventFrequency.showme === "1"
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
                         : 'bg-red-100 text-red-600 hover:bg-red-200'
                     }`}
                   >
-                    {eventFrequency.showme ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {eventFrequency.showme === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -162,7 +237,7 @@ export function EventFrequencies() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(eventFrequency)}
+                      onClick={() => setSelectedEventFrequency(eventFrequency)}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -174,68 +249,70 @@ export function EventFrequencies() {
           </tbody>
         </table>
 
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage(page => Math.min(page + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(startIndex + itemsPerPage, filteredEventFrequencies.length)}
-                </span>{' '}
-                of <span className="font-medium">{filteredEventFrequencies.length}</span> results
-              </p>
+        {pagination && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                disabled={!pagination.has_prev_page}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
+                disabled={!pagination.has_next_page}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Next
+              </button>
             </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                >
-                  <span className="sr-only">Previous</span>
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Showing <span className="font-medium">{(pagination.current_page - 1) * pagination.per_page + 1}</span> to{' '}
+                  <span className="font-medium">
+                    {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
+                  </span>{' '}
+                  of <span className="font-medium">{pagination.total}</span> results
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                   <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      page === currentPage
-                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    }`}
+                    onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                    disabled={!pagination.has_prev_page}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                   >
-                    {page}
+                    <span className="sr-only">Previous</span>
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage(page => Math.min(page + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                >
-                  <span className="sr-only">Next</span>
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </nav>
+                  {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        page === pagination.current_page
+                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
+                    disabled={!pagination.has_next_page}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  >
+                    <span className="sr-only">Next</span>
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </nav>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {selectedEventFrequency && (
