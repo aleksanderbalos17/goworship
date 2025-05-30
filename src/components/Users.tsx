@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import axios from 'axios';
+import { ADMIN_BASE_URL } from '../constants/api';
 
 interface User {
   id: string;
@@ -84,7 +85,7 @@ export function Users() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/users', {
+      const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/users`, {
         params: {
           page,
           per_page: 15
