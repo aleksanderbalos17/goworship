@@ -29,7 +29,8 @@ interface ApiResponse {
 interface DeleteModalProps {
   eventType: EventType;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
+  isDeleting: boolean;
 }
 
 interface AddModalProps {
@@ -38,7 +39,7 @@ interface AddModalProps {
   isSubmitting: boolean;
 }
 
-function DeleteModal({ eventType, onClose, onConfirm }: DeleteModalProps) {
+function DeleteModal({ eventType, onClose, onConfirm, isDeleting }: DeleteModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -49,15 +50,17 @@ function DeleteModal({ eventType, onClose, onConfirm }: DeleteModalProps) {
         <div className="flex space-x-4">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            onClick={() => onConfirm()}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
           >
-            Delete
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>
@@ -129,6 +132,7 @@ export function EventTypes() {
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -159,11 +163,23 @@ export function EventTypes() {
     setSelectedEventType(eventType);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedEventType) {
-      // TODO: Implement delete API call
-      setEventTypes(eventTypes.filter(et => et.id !== selectedEventType.id));
-      setSelectedEventType(null);
+      try {
+        setIsDeleting(true);
+        await axios.delete(`http://localhost:8080/api/admin/event-types/${selectedEventType.id}`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        await fetchEventTypes(currentPage);
+        setSelectedEventType(null);
+      } catch (err) {
+        console.error('Error deleting event type:', err);
+        setError('Failed to delete event type. Please try again later.');
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -185,7 +201,7 @@ export function EventTypes() {
       }
     } catch (err) {
       console.error('Error adding event type:', err);
-      // You might want to show an error message to the user here
+      setError('Failed to add event type. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
@@ -360,6 +376,7 @@ export function EventTypes() {
           eventType={selectedEventType}
           onClose={() => setSelectedEventType(null)}
           onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
         />
       )}
 
