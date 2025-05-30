@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown, CalendarDays, Menu, X } from 'lucide-react';
+import axios from 'axios';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
@@ -13,6 +14,16 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+interface ApiResponse {
+  status: string;
+  data: {
+    users: any[];
+    pagination: {
+      total: number;
+    };
+  };
+}
+
 export function Dashboard({ onLogout }: DashboardProps) {
   const [currentPage, setCurrentPage] = useState<
     'dashboard' | 'events' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
@@ -22,7 +33,34 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const [booksMenuOpen, setBooksMenuOpen] = useState(false);
   const [churchesMenuOpen, setChurchesMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
   const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+
+  useEffect(() => {
+    const fetchTotalUsers = async () => {
+      try {
+        const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/users', {
+          params: {
+            page: 1,
+            per_page: 1
+          },
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        setTotalUsers(response.data.data.pagination.total);
+      } catch (error) {
+        console.error('Error fetching total users:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (currentPage === 'dashboard') {
+      fetchTotalUsers();
+    }
+  }, [currentPage]);
 
   const handleLogout = () => {
     setShowLogoutModal(false);
@@ -53,8 +91,17 @@ export function Dashboard({ onLogout }: DashboardProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Users</h3>
-                <p className="text-3xl font-bold text-indigo-600">1,234</p>
-                <p className="text-sm text-gray-500 mt-2">+12% from last month</p>
+                {isLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-8 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32 mt-2"></div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-bold text-indigo-600">{totalUsers.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mt-2">Registered Users</p>
+                  </>
+                )}
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Books</h3>
@@ -91,7 +138,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar Toggle Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="fixed top-4 left-4 z-20 w-10 h-10 rounded-lg bg-white shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50"
@@ -99,7 +145,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
         {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      {/* Sidebar */}
       <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">GoWorship</h2>
@@ -304,12 +349,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={`flex-1 transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {renderContent()}
       </div>
 
-      {/* Logout Confirmation Modal */}
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -333,7 +376,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
         </div>
       )}
 
-      {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
