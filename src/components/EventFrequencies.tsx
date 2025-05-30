@@ -32,7 +32,8 @@ interface ApiResponse {
 interface DeleteModalProps {
   eventFrequency: EventFrequency;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
+  isDeleting: boolean;
 }
 
 interface EditModalProps {
@@ -48,7 +49,7 @@ interface AddModalProps {
   isSubmitting: boolean;
 }
 
-function DeleteModal({ eventFrequency, onClose, onConfirm }: DeleteModalProps) {
+function DeleteModal({ eventFrequency, onClose, onConfirm, isDeleting }: DeleteModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -59,15 +60,17 @@ function DeleteModal({ eventFrequency, onClose, onConfirm }: DeleteModalProps) {
         <div className="flex space-x-4">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            onClick={() => onConfirm()}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
           >
-            Delete
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>
@@ -276,6 +279,7 @@ export function EventFrequencies() {
   const [editingEventFrequency, setEditingEventFrequency] = useState<EventFrequency | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -285,7 +289,7 @@ export function EventFrequencies() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/event-frequencies', {
+      const response = await axios.get<ApiResponse>('/api/admin/event-frequencies', {
         params: {
           page,
           per_page: 10
@@ -311,7 +315,7 @@ export function EventFrequencies() {
   const handleAddEventFrequency = async (name: string, synonyms: string, active: boolean, showme: boolean) => {
     try {
       setIsSubmitting(true);
-      await axios.post('http://localhost:8080/api/admin/event-frequencies', {
+      await axios.post('/api/admin/event-frequencies', {
         name,
         active,
         synonyms,
@@ -337,7 +341,7 @@ export function EventFrequencies() {
       try {
         setIsSubmitting(true);
         await axios.put(
-          `http://localhost:8080/api/admin/event-frequencies/${editingEventFrequency.id}`,
+          `/api/admin/event-frequencies/${editingEventFrequency.id}`,
           { name, synonyms },
           {
             headers: {
@@ -357,38 +361,51 @@ export function EventFrequencies() {
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedEventFrequency) {
-      setEventFrequencies(eventFrequencies.filter(ef => ef.id !== selectedEventFrequency.id));
-      setSelectedEventFrequency(null);
+      try {
+        setIsDeleting(true);
+        await axios.delete(`/api/admin/event-frequencies/${selectedEventFrequency.id}`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        await fetchEventFrequencies(currentPage);
+        setSelectedEventFrequency(null);
+      } catch (err) {
+        console.error('Error deleting event frequency:', err);
+        setError('Failed to delete event frequency. Please try again later.');
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
   const toggleActive = async (id: string) => {
-    const frequency = eventFrequencies.find(ef => ef.id === id);
-    if (frequency) {
-      try {
-        setEventFrequencies(eventFrequencies.map(ef =>
-          ef.id === id ? { ...ef, active: ef.active === "1" ? "0" : "1" } : ef
-        ));
-      } catch (err) {
-        console.error('Error toggling active status:', err);
-        setError('Failed to update status. Please try again later.');
-      }
+    try {
+      await axios.put(`/api/admin/event-frequencies/${id}/toggle-active`, null, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      await fetchEventFrequencies(currentPage);
+    } catch (err) {
+      console.error('Error toggling active status:', err);
+      setError('Failed to update status. Please try again later.');
     }
   };
 
   const toggleShowme = async (id: string) => {
-    const frequency = eventFrequencies.find(ef => ef.id === id);
-    if (frequency) {
-      try {
-        setEventFrequencies(eventFrequencies.map(ef =>
-          ef.id === id ? { ...ef, showme: ef.showme === "1" ? "0" : "1" } : ef
-        ));
-      } catch (err) {
-        console.error('Error toggling showme status:', err);
-        setError('Failed to update status. Please try again later.');
-      }
+    try {
+      await axios.put(`/api/admin/event-frequencies/${id}/toggle-showme`, null, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      await fetchEventFrequencies(currentPage);
+    } catch (err) {
+      console.error('Error toggling showme status:', err);
+      setError('Failed to update status. Please try again later.');
     }
   };
 
@@ -519,14 +536,14 @@ export function EventFrequencies() {
               <button
                 onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
                 disabled={!pagination.has_prev_page}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
                 disabled={!pagination.has_next_page}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
@@ -546,7 +563,7 @@ export function EventFrequencies() {
                   <button
                     onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
                     disabled={!pagination.has_prev_page}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Previous</span>
                     <ChevronLeft className="h-5 w-5" />
@@ -567,7 +584,7 @@ export function EventFrequencies() {
                   <button
                     onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
                     disabled={!pagination.has_next_page}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Next</span>
                     <ChevronRight className="h-5 w-5" />
@@ -584,6 +601,7 @@ export function EventFrequencies() {
           eventFrequency={selectedEventFrequency}
           onClose={() => setSelectedEventFrequency(null)}
           onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
         />
       )}
 
