@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Check, X, Plus } from 'lucide-react';
 import axios from 'axios';
+import { ADMIN_BASE_URL } from '../constants/api';
 
 interface EventFrequency {
   id: string;
@@ -289,7 +290,7 @@ export function EventFrequencies() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/event-frequencies', {
+      const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/event-frequencies`, {
         params: {
           page,
           per_page: 10
@@ -308,14 +309,10 @@ export function EventFrequencies() {
     }
   };
 
-  useEffect(() => {
-    fetchEventFrequencies(currentPage);
-  }, [currentPage]);
-
   const handleAddEventFrequency = async (name: string, synonyms: string, active: boolean, showme: boolean) => {
     try {
       setIsSubmitting(true);
-      await axios.post('http://localhost:8080/api/admin/event-frequencies', {
+      await axios.post(`${ADMIN_BASE_URL}/event-frequencies`, {
         name,
         active,
         synonyms,
@@ -341,7 +338,7 @@ export function EventFrequencies() {
       try {
         setIsSubmitting(true);
         await axios.put(
-          `http://localhost:8080/api/admin/event-frequencies/${editingEventFrequency.id}`,
+          `${ADMIN_BASE_URL}/event-frequencies/${editingEventFrequency.id}`,
           { name, synonyms },
           {
             headers: {
@@ -365,7 +362,7 @@ export function EventFrequencies() {
     if (selectedEventFrequency) {
       try {
         setIsDeleting(true);
-        await axios.delete(`http://localhost:8080/api/admin/event-frequencies/${selectedEventFrequency.id}`, {
+        await axios.delete(`${ADMIN_BASE_URL}/event-frequencies/${selectedEventFrequency.id}`, {
           headers: {
             'Accept': 'application/json'
           }
@@ -383,7 +380,7 @@ export function EventFrequencies() {
 
   const toggleActive = async (id: string) => {
     try {
-      await axios.put(`http://localhost:8080/api/admin/event-frequencies/${id}/toggle-active`, null, {
+      await axios.put(`${ADMIN_BASE_URL}/event-frequencies/${id}/toggle-active`, null, {
         headers: {
           'Accept': 'application/json'
         }
@@ -397,7 +394,7 @@ export function EventFrequencies() {
 
   const toggleShowme = async (id: string) => {
     try {
-      await axios.put(`http://localhost:8080/api/admin/event-frequencies/${id}/toggle-showme`, null, {
+      await axios.put(`${ADMIN_BASE_URL}/event-frequencies/${id}/toggle-showme`, null, {
         headers: {
           'Accept': 'application/json'
         }
@@ -408,6 +405,10 @@ export function EventFrequencies() {
       setError('Failed to update status. Please try again later.');
     }
   };
+
+  useEffect(() => {
+    fetchEventFrequencies(currentPage);
+  }, [currentPage]);
 
   if (isLoading && !eventFrequencies.length) {
     return (

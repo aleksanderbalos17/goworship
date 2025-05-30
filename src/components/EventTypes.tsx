@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
 import axios from 'axios';
+import { ADMIN_BASE_URL } from '../constants/api';
 
 interface EventType {
   id: string;
@@ -208,9 +209,15 @@ export function EventTypes() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>(
-        `http://localhost:8080/api/admin/event-types?page=${page}&per_page=10`
-      );
+      const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/event-types`, {
+        params: {
+          page,
+          per_page: 10
+        },
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
       setEventTypes(response.data.data.event_types);
       setPagination(response.data.data.pagination);
     } catch (err) {
@@ -221,12 +228,25 @@ export function EventTypes() {
     }
   };
 
-  useEffect(() => {
-    fetchEventTypes(currentPage);
-  }, [currentPage]);
-
-  const handleEdit = (eventType: EventType) => {
-    setEditingEventType(eventType);
+  const handleAddEventType = async (name: string) => {
+    try {
+      setIsSubmitting(true);
+      await axios.post(`${ADMIN_BASE_URL}/event-types`, {
+        name: name
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      await fetchEventTypes(currentPage);
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error adding event type:', err);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditConfirm = async (name: string) => {
@@ -234,7 +254,7 @@ export function EventTypes() {
       try {
         setIsSubmitting(true);
         await axios.put(
-          `http://localhost:8080/api/admin/event-types/${editingEventType.id}`,
+          `${ADMIN_BASE_URL}/event-types/${editingEventType.id}`,
           { name },
           {
             headers: {
@@ -247,22 +267,18 @@ export function EventTypes() {
         setEditingEventType(null);
       } catch (err) {
         console.error('Error updating event type:', err);
-        setError('Failed to update event type. Please try again later.');
+        throw err;
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  const handleDelete = (eventType: EventType) => {
-    setSelectedEventType(eventType);
-  };
-
   const handleDeleteConfirm = async () => {
     if (selectedEventType) {
       try {
         setIsDeleting(true);
-        await axios.delete(`http://localhost:8080/api/admin/event-types/${selectedEventType.id}`, {
+        await axios.delete(`${ADMIN_BASE_URL}/event-types/${selectedEventType.id}`, {
           headers: {
             'Accept': 'application/json'
           }
@@ -278,28 +294,16 @@ export function EventTypes() {
     }
   };
 
-  const handleAddEventType = async (name: string) => {
-    try {
-      setIsSubmitting(true);
-      const response = await axios.post('http://localhost:8080/api/admin/event-types', {
-        name: name
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (response.data.status === 'success') {
-        fetchEventTypes(currentPage);
-        setShowAddModal(false);
-      }
-    } catch (err) {
-      console.error('Error adding event type:', err);
-      setError('Failed to add event type. Please try again later.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  useEffect(() => {
+    fetchEventTypes(currentPage);
+  }, [currentPage]);
+
+  const handleEdit = (eventType: EventType) => {
+    setEditingEventType(eventType);
+  };
+
+  const handleDelete = (eventType: EventType) => {
+    setSelectedEventType(eventType);
   };
 
   const filteredEventTypes = eventTypes.filter(eventType => 
