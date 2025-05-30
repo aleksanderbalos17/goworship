@@ -165,14 +165,24 @@ export function Users() {
     setSelectedUser(user);
   };
 
-  const handleStatusConfirm = () => {
+  const handleStatusConfirm = async () => {
     if (selectedUser) {
-      setUsers(users.map(user => 
-        user.id === selectedUser.id
-          ? { ...user, login_enabled: user.login_enabled === "1" ? "0" : "1" }
-          : user
-      ));
-      setSelectedUser(null);
+      try {
+        await axios.put(`${ADMIN_BASE_URL}/users/${selectedUser.id}/toggle-login`, null, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        setUsers(users.map(user => 
+          user.id === selectedUser.id
+            ? { ...user, login_enabled: user.login_enabled === "1" ? "0" : "1" }
+            : user
+        ));
+        setSelectedUser(null);
+      } catch (err) {
+        console.error('Error toggling user login status:', err);
+        setError('Failed to update user login status. Please try again later.');
+      }
     }
   };
 
