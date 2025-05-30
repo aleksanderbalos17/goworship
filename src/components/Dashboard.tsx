@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, Book, Dribbble as Bible, Settings, LogOut, Church, Building2, Calendar, ChevronDown, CalendarDays, Menu, X } from 'lucide-react';
 import axios from 'axios';
+import { ADMIN_BASE_URL } from '../constants/api';
 import { Users as UsersPage } from './Users';
 import { Books } from './Books';
 import { Bibles } from './Bibles';
@@ -40,7 +41,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   useEffect(() => {
     const fetchTotalUsers = async () => {
       try {
-        const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/users', {
+        const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/users`, {
           params: {
             page: 1,
             per_page: 1
