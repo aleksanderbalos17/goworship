@@ -8,6 +8,8 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
+  username: string;
+  username_approved: "0" | "1" | "2";
   fcm_token: string | null;
   social_facebook_id: string | null;
   social_google_id: string | null;
@@ -43,6 +45,14 @@ interface StatusModalProps {
   onConfirm: () => void;
 }
 
+interface UsernameModalProps {
+  user: User;
+  onClose: () => void;
+  onApprove: () => Promise<void>;
+  onDecline: () => Promise<void>;
+  isSubmitting: boolean;
+}
+
 function StatusModal({ user, onClose, onConfirm }: StatusModalProps) {
   const newStatus = user.login_enabled === "1" ? "disable" : "enable";
   
@@ -72,13 +82,56 @@ function StatusModal({ user, onClose, onConfirm }: StatusModalProps) {
   );
 }
 
+function UsernameModal({ user, onClose, onApprove, onDecline, isSubmitting }: UsernameModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Username Review</h3>
+        <div className="mb-6">
+          <p className="text-gray-600 mb-2">
+            User: {user.first_name} {user.last_name}
+          </p>
+          <p className="text-gray-800 font-medium">
+            Requested Username: <span className="text-indigo-600">{user.username}</span>
+          </p>
+        </div>
+        <div className="flex space-x-4">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onDecline}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Processing...' : 'Decline'}
+          </button>
+          <button
+            onClick={onApprove}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            {isSubmitting ? 'Processing...' : 'Approve'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUsernameReview, setSelectedUsernameReview] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async (page: number) => {
@@ -123,9 +176,62 @@ export function Users() {
     }
   };
 
+  const handleUsernameApproval = async (user: User) => {
+    setSelectedUsernameReview(user);
+  };
+
+  const handleApproveUsername = async () => {
+    if (!selectedUsernameReview) return;
+    
+    try {
+      setIsSubmitting(true);
+      await axios.post(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/approve-username`, null, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      setUsers(users.map(user => 
+        user.id === selectedUsernameReview.id
+          ? { ...user, username_approved: "1" }
+          : user
+      ));
+      setSelectedUsernameReview(null);
+    } catch (err) {
+      console.error('Error approving username:', err);
+      setError('Failed to approve username. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeclineUsername = async () => {
+    if (!selectedUsernameReview) return;
+    
+    try {
+      setIsSubmitting(true);
+      await axios.post(`${ADMIN_BASE_URL}/users/${selectedUsernameReview.id}/decline-username`, null, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      setUsers(users.map(user => 
+        user.id === selectedUsernameReview.id
+          ? { ...user, username_approved: "2" }
+          : user
+      ));
+      setSelectedUsernameReview(null);
+    } catch (err) {
+      console.error('Error declining username:', err);
+      setError('Failed to decline username. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (isLoading && !users.length) {
@@ -176,6 +282,7 @@ export function Users() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Online</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -193,6 +300,28 @@ export function Users() {
                   <div className="text-sm text-gray-500">{user.email}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  {user.username && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-900">{user.username}</span>
+                      {user.username_approved === "0" && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                          Pending Review
+                        </span>
+                      )}
+                      {user.username_approved === "1" && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          Approved
+                        </span>
+                      )}
+                      {user.username_approved === "2" && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                          Declined
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     user.login_enabled === "1"
                       ? 'bg-green-100 text-green-800'
@@ -205,20 +334,30 @@ export function Users() {
                   {user.last_onlineAt}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    onClick={() => toggleUserStatus(user)}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      user.login_enabled === "1"
-                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                        : 'bg-green-100 text-green-600 hover:bg-green-200'
-                    }`}
-                  >
-                    {user.login_enabled === "1" ? (
-                      <X className="w-5 h-5" />
-                    ) : (
-                      <Check className="w-5 h-5" />
+                  <div className="flex space-x-2">
+                    {user.username && user.username_approved === "0" && (
+                      <button
+                        onClick={() => handleUsernameApproval(user)}
+                        className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-md hover:bg-indigo-200"
+                      >
+                        Review Username
+                      </button>
                     )}
-                  </button>
+                    <button
+                      onClick={() => toggleUserStatus(user)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        user.login_enabled === "1"
+                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                          : 'bg-green-100 text-green-600 hover:bg-green-200'
+                      }`}
+                    >
+                      {user.login_enabled === "1" ? (
+                        <X className="w-5 h-5" />
+                      ) : (
+                        <Check className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -296,6 +435,16 @@ export function Users() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onConfirm={handleStatusConfirm}
+        />
+      )}
+
+      {selectedUsernameReview && (
+        <UsernameModal
+          user={selectedUsernameReview}
+          onClose={() => setSelectedUsernameReview(null)}
+          onApprove={handleApproveUsername}
+          onDecline={handleDeclineUsername}
+          isSubmitting={isSubmitting}
         />
       )}
     </div>
