@@ -75,21 +75,15 @@ export function EventFrequencies() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>(
-        `/api/admin/event-frequencies`,
-        {
-          params: {
-            page,
-            per_page: 10,
-            search: searchTerm,
-            sort_by: 'created_at',
-            sort_order: 'DESC'
-          },
-          headers: {
-            'Accept': 'application/json'
-          }
+      const response = await axios.get<ApiResponse>('/api/admin/event-frequencies', {
+        params: {
+          page,
+          per_page: 10
+        },
+        headers: {
+          'Accept': 'application/json'
         }
-      );
+      });
       setEventFrequencies(response.data.data.frequencies);
       setPagination(response.data.data.pagination);
     } catch (err) {
@@ -102,11 +96,10 @@ export function EventFrequencies() {
 
   useEffect(() => {
     fetchEventFrequencies(currentPage);
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
 
   const handleDeleteConfirm = () => {
     if (selectedEventFrequency) {
-      // Implement delete API call here
       setEventFrequencies(eventFrequencies.filter(ef => ef.id !== selectedEventFrequency.id));
       setSelectedEventFrequency(null);
     }
@@ -116,7 +109,6 @@ export function EventFrequencies() {
     const frequency = eventFrequencies.find(ef => ef.id === id);
     if (frequency) {
       try {
-        // Implement toggle active API call here
         setEventFrequencies(eventFrequencies.map(ef =>
           ef.id === id ? { ...ef, active: ef.active === "1" ? "0" : "1" } : ef
         ));
@@ -131,7 +123,6 @@ export function EventFrequencies() {
     const frequency = eventFrequencies.find(ef => ef.id === id);
     if (frequency) {
       try {
-        // Implement toggle showme API call here
         setEventFrequencies(eventFrequencies.map(ef =>
           ef.id === id ? { ...ef, showme: ef.showme === "1" ? "0" : "1" } : ef
         ));
@@ -168,6 +159,11 @@ export function EventFrequencies() {
     );
   }
 
+  const filteredEventFrequencies = eventFrequencies.filter(frequency => 
+    frequency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    frequency.synonyms.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -196,36 +192,36 @@ export function EventFrequencies() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {eventFrequencies.map((eventFrequency) => (
-              <tr key={eventFrequency.id} className="hover:bg-gray-50">
+            {filteredEventFrequencies.map((frequency) => (
+              <tr key={frequency.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{eventFrequency.name}</div>
+                  <div className="text-sm font-medium text-gray-900">{frequency.name}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500">{eventFrequency.synonyms}</div>
+                  <div className="text-sm text-gray-500">{frequency.synonyms}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
-                    onClick={() => toggleActive(eventFrequency.id)}
+                    onClick={() => toggleActive(frequency.id)}
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      eventFrequency.active === "1"
+                      frequency.active === "1"
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
                         : 'bg-red-100 text-red-600 hover:bg-red-200'
                     }`}
                   >
-                    {eventFrequency.active === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {frequency.active === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
-                    onClick={() => toggleShowme(eventFrequency.id)}
+                    onClick={() => toggleShowme(frequency.id)}
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      eventFrequency.showme === "1"
+                      frequency.showme === "1"
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
                         : 'bg-red-100 text-red-600 hover:bg-red-200'
                     }`}
                   >
-                    {eventFrequency.showme === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                    {frequency.showme === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                   </button>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -237,7 +233,7 @@ export function EventFrequencies() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => setSelectedEventFrequency(eventFrequency)}
+                      onClick={() => setSelectedEventFrequency(frequency)}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
                     >
                       <Trash2 className="w-4 h-4" />
