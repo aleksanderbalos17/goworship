@@ -289,7 +289,7 @@ export function EventFrequencies() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<ApiResponse>('/api/admin/event-frequencies', {
+      const response = await axios.get<ApiResponse>('http://localhost:8080/api/admin/event-frequencies', {
         params: {
           page,
           per_page: 10
@@ -315,7 +315,7 @@ export function EventFrequencies() {
   const handleAddEventFrequency = async (name: string, synonyms: string, active: boolean, showme: boolean) => {
     try {
       setIsSubmitting(true);
-      await axios.post('/api/admin/event-frequencies', {
+      await axios.post('http://localhost:8080/api/admin/event-frequencies', {
         name,
         active,
         synonyms,
@@ -341,7 +341,7 @@ export function EventFrequencies() {
       try {
         setIsSubmitting(true);
         await axios.put(
-          `/api/admin/event-frequencies/${editingEventFrequency.id}`,
+          `http://localhost:8080/api/admin/event-frequencies/${editingEventFrequency.id}`,
           { name, synonyms },
           {
             headers: {
@@ -365,7 +365,7 @@ export function EventFrequencies() {
     if (selectedEventFrequency) {
       try {
         setIsDeleting(true);
-        await axios.delete(`/api/admin/event-frequencies/${selectedEventFrequency.id}`, {
+        await axios.delete(`http://localhost:8080/api/admin/event-frequencies/${selectedEventFrequency.id}`, {
           headers: {
             'Accept': 'application/json'
           }
@@ -383,7 +383,7 @@ export function EventFrequencies() {
 
   const toggleActive = async (id: string) => {
     try {
-      await axios.put(`/api/admin/event-frequencies/${id}/toggle-active`, null, {
+      await axios.put(`http://localhost:8080/api/admin/event-frequencies/${id}/toggle-active`, null, {
         headers: {
           'Accept': 'application/json'
         }
@@ -397,7 +397,7 @@ export function EventFrequencies() {
 
   const toggleShowme = async (id: string) => {
     try {
-      await axios.put(`/api/admin/event-frequencies/${id}/toggle-showme`, null, {
+      await axios.put(`http://localhost:8080/api/admin/event-frequencies/${id}/toggle-showme`, null, {
         headers: {
           'Accept': 'application/json'
         }
