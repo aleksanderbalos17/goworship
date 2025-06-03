@@ -14,6 +14,13 @@ interface Bible {
   book_name: string;
 }
 
+interface Book {
+  id: string;
+  book: string;
+  chapters: string;
+  testament: string;
+}
+
 interface PaginationData {
   current_page: number;
   per_page: number;
@@ -27,6 +34,14 @@ interface ApiResponse {
   status: string;
   data: {
     verses: Bible[];
+    pagination: PaginationData;
+  };
+}
+
+interface BooksApiResponse {
+  status: string;
+  data: {
+    books: Book[];
     pagination: PaginationData;
   };
 }
@@ -49,6 +64,7 @@ interface AddModalProps {
   onClose: () => void;
   onConfirm: (bookId: string, chapter: number, verse: number, copy: string) => Promise<void>;
   isSubmitting: boolean;
+  books: Book[];
 }
 
 function DeleteModal({ bible, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -182,8 +198,8 @@ function EditModal({ bible, onClose, onConfirm, isSubmitting }: EditModalProps) 
   );
 }
 
-function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
-  const [bookId, setBookId] = useState('1');
+function AddModal({ onClose, onConfirm, isSubmitting, books }: AddModalProps) {
+  const [bookId, setBookId] = useState('');
   const [chapter, setChapter] = useState(1);
   const [verse, setVerse] = useState(1);
   const [copy, setCopy] = useState('');
@@ -191,6 +207,10 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!bookId) {
+      setError('Please select a book');
+      return;
+    }
     if (!copy.trim()) {
       setError('Verse text is required');
       return;
@@ -217,6 +237,25 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Bible Verse</h3>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <div>
+              <label htmlFor="book" className="block text-sm font-medium text-gray-700 mb-1">
+                Book
+              </label>
+              <select
+                id="book"
+                value={bookId}
+                onChange={(e) => setBookId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Select a book</option>
+                {books.map((book) => (
+                  <option key={book.id} value={book.id}>
+                    {book.book}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label htmlFor="chapter" className="block text-sm font-medium text-gray-700 mb-1">
                 Chapter
@@ -294,6 +333,7 @@ export function Bibles() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [bibles, setBibles] = useState<Bible[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -344,7 +384,7 @@ export function Bibles() {
       const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/bible-verses`, {
         params: {
           page,
-          per_page: 50,
+          per_page: 20,
           sort_by: 'id',
           sort_order: 'ASC'
         },
@@ -359,6 +399,26 @@ export function Bibles() {
       console.error('Error fetching bible verses:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchBooks = async () => {
+    try {
+      const response = await axios.get<BooksApiResponse>(`${ADMIN_BASE_URL}/bible-books`, {
+        params: {
+          page: 1,
+          per_page: 100,
+          sort_by: 'id',
+          sort_order: 'ASC'
+        },
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      setBooks(response.data.data.books);
+    } catch (err) {
+      console.error('Error fetching books:', err);
+      setError('Failed to fetch books. Please try again later.');
     }
   };
 
@@ -439,6 +499,10 @@ export function Bibles() {
   useEffect(() => {
     fetchBibles(currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
 
   const filteredBibles = bibles.filter(bible => 
     bible.copy.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -641,6 +705,7 @@ export function Bibles() {
           onClose={() => setShowAddModal(false)}
           onConfirm={handleAddBible}
           isSubmitting={isSubmitting}
+          books={books}
         />
       )}
     </div>
