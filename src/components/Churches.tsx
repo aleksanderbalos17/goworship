@@ -86,7 +86,7 @@ export function Churches() {
       const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/churches`, {
         params: {
           page,
-          per_page: 10,
+          per_page: 50,
           sort_by: 'id',
           sort_order: 'ASC'
         },
@@ -130,6 +130,52 @@ export function Churches() {
         setIsDeleting(false);
       }
     }
+  };
+
+  const getPageNumbers = (currentPage: number, totalPages: number) => {
+    const maxPages = 5;
+    const pages: number[] = [];
+    
+    if (totalPages <= maxPages) {
+      // If total pages is less than max, show all pages
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always include first page
+      pages.push(1);
+      
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust start and end to always show 3 pages in the middle
+      if (currentPage <= 2) {
+        end = 3;
+      }
+      if (currentPage >= totalPages - 1) {
+        start = totalPages - 2;
+      }
+      
+      // Add ellipsis if needed
+      if (start > 2) {
+        pages.push(-1); // -1 represents ellipsis
+      }
+      
+      // Add middle pages
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (end < totalPages - 1) {
+        pages.push(-1); // -1 represents ellipsis
+      }
+      
+      // Always include last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   const filteredChurches = churches.filter(church => 
@@ -269,18 +315,27 @@ export function Churches() {
                     <span className="sr-only">Previous</span>
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        page === pagination.current_page
-                          ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
+                  {getPageNumbers(pagination.current_page, pagination.total_pages).map((page, index) => (
+                    page === -1 ? (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          page === pagination.current_page
+                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
                   ))}
                   <button
                     onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
