@@ -123,7 +123,7 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
             
             <div>
               <label htmlFor="synonyms" className="block text-sm font-medium text-gray-700 mb-1">
-                Synonyms
+                Comments
               </label>
               <input
                 type="text"
