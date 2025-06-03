@@ -344,7 +344,7 @@ export function Bibles() {
       const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/bible-verses`, {
         params: {
           page,
-          per_page: 20,
+          per_page: 50,
           sort_by: 'id',
           sort_order: 'ASC'
         },
