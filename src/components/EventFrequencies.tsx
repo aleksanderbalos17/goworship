@@ -7,7 +7,7 @@ interface EventFrequency {
   id: string;
   name: string;
   active: string;
-  synonyms: string;
+  notes: string;
   showme: string;
   created_at: string;
   updated_at: string | null;
@@ -40,13 +40,13 @@ interface DeleteModalProps {
 interface EditModalProps {
   eventFrequency: EventFrequency;
   onClose: () => void;
-  onConfirm: (name: string, synonyms: string) => Promise<void>;
+  onConfirm: (name: string, notes: string) => Promise<void>;
   isSubmitting: boolean;
 }
 
 interface AddModalProps {
   onClose: () => void;
-  onConfirm: (name: string, synonyms: string, active: boolean, showme: boolean) => Promise<void>;
+  onConfirm: (name: string, notes: string, active: boolean, showme: boolean) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -81,7 +81,7 @@ function DeleteModal({ eventFrequency, onClose, onConfirm, isDeleting }: DeleteM
 
 function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditModalProps) {
   const [name, setName] = useState(eventFrequency.name);
-  const [synonyms, setSynonyms] = useState(eventFrequency.synonyms);
+  const [notes, setNotes] = useState(eventFrequency.notes);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,7 +91,7 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
       return;
     }
     try {
-      await onConfirm(name, synonyms);
+      await onConfirm(name, notes);
       onClose();
     } catch (err) {
       setError('Failed to update event frequency');
@@ -122,16 +122,16 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
             </div>
             
             <div>
-              <label htmlFor="synonyms" className="block text-sm font-medium text-gray-700 mb-1">
-                Comments
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
               </label>
               <input
                 type="text"
-                id="synonyms"
-                value={synonyms}
-                onChange={(e) => setSynonyms(e.target.value)}
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter synonyms (comma-separated)"
+                placeholder="Enter additional notes"
               />
             </div>
 
@@ -163,7 +163,7 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
 
 function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
   const [name, setName] = useState('');
-  const [synonyms, setSynonyms] = useState('');
+  const [notes, setNotes] = useState('');
   const [active, setActive] = useState(true);
   const [showme, setShowme] = useState(true);
   const [error, setError] = useState('');
@@ -175,7 +175,7 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
       return;
     }
     try {
-      await onConfirm(name, synonyms, active, showme);
+      await onConfirm(name, notes, active, showme);
       onClose();
     } catch (err) {
       setError('Failed to create event frequency');
@@ -206,16 +206,16 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
             </div>
             
             <div>
-              <label htmlFor="synonyms" className="block text-sm font-medium text-gray-700 mb-1">
-                Synonyms
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
               </label>
               <input
                 type="text"
-                id="synonyms"
-                value={synonyms}
-                onChange={(e) => setSynonyms(e.target.value)}
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter synonyms (comma-separated)"
+                placeholder="Enter additional notes"
               />
             </div>
 
@@ -309,13 +309,13 @@ export function EventFrequencies() {
     }
   };
 
-  const handleAddEventFrequency = async (name: string, synonyms: string, active: boolean, showme: boolean) => {
+  const handleAddEventFrequency = async (name: string, notes: string, active: boolean, showme: boolean) => {
     try {
       setIsSubmitting(true);
       await axios.post(`${ADMIN_BASE_URL}/event-frequencies`, {
         name,
         active,
-        synonyms,
+        notes,
         showme
       }, {
         headers: {
@@ -333,13 +333,13 @@ export function EventFrequencies() {
     }
   };
 
-  const handleEditEventFrequency = async (name: string, synonyms: string) => {
+  const handleEditEventFrequency = async (name: string, notes: string) => {
     if (editingEventFrequency) {
       try {
         setIsSubmitting(true);
         await axios.put(
           `${ADMIN_BASE_URL}/event-frequencies/${editingEventFrequency.id}`,
-          { name, synonyms },
+          { name, notes },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -410,6 +410,11 @@ export function EventFrequencies() {
     fetchEventFrequencies(currentPage);
   }, [currentPage]);
 
+  const filteredEventFrequencies = eventFrequencies.filter(frequency => 
+    frequency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    frequency.notes.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isLoading && !eventFrequencies.length) {
     return (
       <div className="p-6">
@@ -435,11 +440,6 @@ export function EventFrequencies() {
       </div>
     );
   }
-
-  const filteredEventFrequencies = eventFrequencies.filter(frequency => 
-    frequency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    frequency.synonyms.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="p-6">
@@ -471,7 +471,7 @@ export function EventFrequencies() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Synonyms</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Show Me</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -484,7 +484,7 @@ export function EventFrequencies() {
                   <div className="text-sm font-medium text-gray-900">{frequency.name}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500">{frequency.synonyms}</div>
+                  <div className="text-sm text-gray-500">{frequency.notes}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
