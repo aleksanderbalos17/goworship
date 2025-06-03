@@ -7,7 +7,7 @@ interface Denomination {
   id: string;
   name: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 interface PaginationData {
@@ -236,10 +236,6 @@ export function Denominations() {
     }
   };
 
-  useEffect(() => {
-    fetchDenominations(currentPage);
-  }, [currentPage]);
-
   const handleAddDenomination = async (name: string) => {
     try {
       setIsSubmitting(true);
@@ -305,6 +301,10 @@ export function Denominations() {
       }
     }
   };
+
+  useEffect(() => {
+    fetchDenominations(currentPage);
+  }, [currentPage]);
 
   const getPageNumbers = (currentPage: number, totalPages: number) => {
     const maxPages = 5;
