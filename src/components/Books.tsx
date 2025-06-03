@@ -299,8 +299,8 @@ export function Books() {
       const response = await axios.get<ApiResponse>(`${ADMIN_BASE_URL}/bible-books`, {
         params: {
           page,
-          per_page: 10,
-          sort_by: 'book',
+          per_page: 20,
+          sort_by: 'id',
           sort_order: 'ASC'
         },
         headers: {
