@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
+import axios from 'axios';
+import { ADMIN_BASE_URL } from '../constants/api';
 
 interface Event {
   id: string;
@@ -13,6 +15,390 @@ interface Event {
   additionalText: string;
   churchName: string;
   locationAddress: string;
+}
+
+interface DeleteModalProps {
+  event: Event;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+  isDeleting: boolean;
+}
+
+interface EditModalProps {
+  event: Event;
+  onClose: () => void;
+  onConfirm: (eventData: Partial<Event>) => Promise<void>;
+  isSubmitting: boolean;
+}
+
+interface AddModalProps {
+  onClose: () => void;
+  onConfirm: (eventData: Omit<Event, 'id'>) => Promise<void>;
+  isSubmitting: boolean;
+}
+
+function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Event</h3>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete "{event.name}"? This action cannot be undone.
+        </p>
+        <div className="flex space-x-4">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm()}
+            disabled={isDeleting}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditModal({ event, onClose, onConfirm, isSubmitting }: EditModalProps) {
+  const [name, setName] = useState(event.name);
+  const [eventType, setEventType] = useState(event.eventType);
+  const [day, setDay] = useState(event.day);
+  const [time, setTime] = useState(event.time);
+  const [duration, setDuration] = useState(event.duration);
+  const [additionalText, setAdditionalText] = useState(event.additionalText);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Event name is required');
+      return;
+    }
+    try {
+      await onConfirm({
+        name,
+        eventType,
+        day,
+        time,
+        duration,
+        additionalText
+      });
+    } catch (err) {
+      setError('Failed to update event');
+    }
+  };
+
+  const formatTimeForInput = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
+  const parseTimeFromInput = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Event</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Event Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter event name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-1">
+                Event Type
+              </label>
+              <select
+                id="eventType"
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="Service">Service</option>
+                <option value="Prayer Meeting">Prayer Meeting</option>
+                <option value="Bible Study">Bible Study</option>
+                <option value="Youth Group">Youth Group</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="day" className="block text-sm font-medium text-gray-700 mb-1">
+                Day of Week
+              </label>
+              <select
+                id="day"
+                value={day}
+                onChange={(e) => setDay(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value={0}>Sunday</option>
+                <option value={1}>Monday</option>
+                <option value={2}>Tuesday</option>
+                <option value={3}>Wednesday</option>
+                <option value={4}>Thursday</option>
+                <option value={5}>Friday</option>
+                <option value={6}>Saturday</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                id="time"
+                value={formatTimeForInput(time)}
+                onChange={(e) => setTime(parseTimeFromInput(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+                Duration (minutes)
+              </label>
+              <input
+                type="number"
+                id="duration"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+                min="15"
+                step="15"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-1">
+                Additional Notes
+              </label>
+              <textarea
+                id="additionalText"
+                value={additionalText}
+                onChange={(e) => setAdditionalText(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter additional notes"
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <div className="flex space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
+  const [name, setName] = useState('');
+  const [eventType, setEventType] = useState('Service');
+  const [day, setDay] = useState(0);
+  const [time, setTime] = useState(600); // 10:00 AM
+  const [duration, setDuration] = useState(60);
+  const [additionalText, setAdditionalText] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Event name is required');
+      return;
+    }
+    try {
+      await onConfirm({
+        name,
+        eventType,
+        day,
+        time,
+        duration,
+        churchLocationId: 'loc-1', // This would come from a church/location selector
+        eventFrequencyId: 'freq-1', // This would come from a frequency selector
+        additionalText,
+        churchName: 'Sample Church', // This would be populated based on selection
+        locationAddress: 'Sample Address' // This would be populated based on selection
+      });
+      onClose();
+    } catch (err) {
+      setError('Failed to create event');
+    }
+  };
+
+  const formatTimeForInput = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
+  const parseTimeFromInput = (timeString: string): number => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Event</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Event Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter event name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-1">
+                Event Type
+              </label>
+              <select
+                id="eventType"
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="Service">Service</option>
+                <option value="Prayer Meeting">Prayer Meeting</option>
+                <option value="Bible Study">Bible Study</option>
+                <option value="Youth Group">Youth Group</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="day" className="block text-sm font-medium text-gray-700 mb-1">
+                Day of Week
+              </label>
+              <select
+                id="day"
+                value={day}
+                onChange={(e) => setDay(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value={0}>Sunday</option>
+                <option value={1}>Monday</option>
+                <option value={2}>Tuesday</option>
+                <option value={3}>Wednesday</option>
+                <option value={4}>Thursday</option>
+                <option value={5}>Friday</option>
+                <option value={6}>Saturday</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                id="time"
+                value={formatTimeForInput(time)}
+                onChange={(e) => setTime(parseTimeFromInput(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+                Duration (minutes)
+              </label>
+              <input
+                type="number"
+                id="duration"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+                min="15"
+                step="15"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-1">
+                Additional Notes
+              </label>
+              <textarea
+                id="additionalText"
+                value={additionalText}
+                onChange={(e) => setAdditionalText(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter additional notes"
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <div className="flex space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Creating...' : 'Create Event'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function formatTime(minutes: number): string {
@@ -31,8 +417,13 @@ function getDayName(day: number): string {
 export function Events() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // Mock data
+  // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
     id: `${i + 1}`,
     name: `Event ${i + 1}`,
@@ -47,8 +438,10 @@ export function Events() {
     locationAddress: `${100 + i} Church Street, City ${i % 5 + 1}`
   }));
 
+  const [events, setEvents] = useState<Event[]>(mockEvents);
+
   const itemsPerPage = 10;
-  const filteredEvents = mockEvents.filter(event => 
+  const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.eventType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.churchName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -58,19 +451,90 @@ export function Events() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedEvents = filteredEvents.slice(startIndex, startIndex + itemsPerPage);
 
+  const handleAddEvent = async (eventData: Omit<Event, 'id'>) => {
+    try {
+      setIsSubmitting(true);
+      // TODO: Replace with actual API call
+      // await axios.post(`${ADMIN_BASE_URL}/events`, eventData);
+      
+      // For now, add to local state with a new ID
+      const newEvent: Event = {
+        ...eventData,
+        id: `${Date.now()}`
+      };
+      setEvents([...events, newEvent]);
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error adding event:', err);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditEvent = async (eventData: Partial<Event>) => {
+    if (editingEvent) {
+      try {
+        setIsSubmitting(true);
+        // TODO: Replace with actual API call
+        // await axios.put(`${ADMIN_BASE_URL}/events/${editingEvent.id}`, eventData);
+        
+        // For now, update local state
+        setEvents(events.map(event => 
+          event.id === editingEvent.id 
+            ? { ...event, ...eventData }
+            : event
+        ));
+        setEditingEvent(null);
+      } catch (err) {
+        console.error('Error updating event:', err);
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedEvent) {
+      try {
+        setIsDeleting(true);
+        // TODO: Replace with actual API call
+        // await axios.delete(`${ADMIN_BASE_URL}/events/${selectedEvent.id}`);
+        
+        // For now, remove from local state
+        setEvents(events.filter(event => event.id !== selectedEvent.id));
+        setSelectedEvent(null);
+      } catch (err) {
+        console.error('Error deleting event:', err);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">All Events</h1>
-        <div className="relative">
-          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search events..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
-          />
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
+            />
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add New Event</span>
+          </button>
         </div>
       </div>
 
@@ -113,13 +577,13 @@ export function Events() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => {}}
+                      onClick={() => setEditingEvent(event)}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={() => setSelectedEvent(event)}
                       className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -194,6 +658,32 @@ export function Events() {
           </div>
         </div>
       </div>
+
+      {selectedEvent && (
+        <DeleteModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onConfirm={handleDeleteConfirm}
+          isDeleting={isDeleting}
+        />
+      )}
+
+      {editingEvent && (
+        <EditModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onConfirm={handleEditEvent}
+          isSubmitting={isSubmitting}
+        />
+      )}
+
+      {showAddModal && (
+        <AddModal
+          onClose={() => setShowAddModal(false)}
+          onConfirm={handleAddEvent}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 }
