@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import { ADMIN_BASE_URL } from '../constants/api';
 
@@ -27,266 +27,9 @@ interface ApiResponse {
   };
 }
 
-interface DeleteModalProps {
-  book: Book;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-  isDeleting: boolean;
-}
-
-interface EditModalProps {
-  book: Book;
-  onClose: () => void;
-  onConfirm: (name: string, chapters: number, testament: number) => Promise<void>;
-  isSubmitting: boolean;
-}
-
-interface AddModalProps {
-  onClose: () => void;
-  onConfirm: (name: string, chapters: number, testament: number) => Promise<void>;
-  isSubmitting: boolean;
-}
-
-function DeleteModal({ book, onClose, onConfirm, isDeleting }: DeleteModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Book</h3>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to delete "{book.book}"? This action cannot be undone.
-        </p>
-        <div className="flex space-x-4">
-          <button
-            onClick={onClose}
-            disabled={isDeleting}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm()}
-            disabled={isDeleting}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-          >
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditModal({ book, onClose, onConfirm, isSubmitting }: EditModalProps) {
-  const [name, setName] = useState(book.book);
-  const [chapters, setChapters] = useState(parseInt(book.chapters));
-  const [testament, setTestament] = useState(parseInt(book.testament));
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Book name is required');
-      return;
-    }
-    if (chapters < 1) {
-      setError('Number of chapters must be at least 1');
-      return;
-    }
-    try {
-      await onConfirm(name, chapters, testament);
-    } catch (err) {
-      setError('Failed to update book');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Book</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError('');
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter book name"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="chapters" className="block text-sm font-medium text-gray-700 mb-1">
-                Chapters
-              </label>
-              <input
-                type="number"
-                id="chapters"
-                value={chapters}
-                onChange={(e) => setChapters(parseInt(e.target.value))}
-                min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="testament" className="block text-sm font-medium text-gray-700 mb-1">
-                Testament
-              </label>
-              <select
-                id="testament"
-                value={testament}
-                onChange={(e) => setTestament(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value={0}>Old Testament</option>
-                <option value={1}>New Testament</option>
-              </select>
-            </div>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
-  const [name, setName] = useState('');
-  const [chapters, setChapters] = useState(1);
-  const [testament, setTestament] = useState(0);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      setError('Book name is required');
-      return;
-    }
-    if (chapters < 1) {
-      setError('Number of chapters must be at least 1');
-      return;
-    }
-    try {
-      await onConfirm(name, chapters, testament);
-      onClose();
-    } catch (err) {
-      setError('Failed to create book');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Book</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError('');
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter book name"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="chapters" className="block text-sm font-medium text-gray-700 mb-1">
-                Chapters
-              </label>
-              <input
-                type="number"
-                id="chapters"
-                value={chapters}
-                onChange={(e) => setChapters(parseInt(e.target.value))}
-                min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="testament" className="block text-sm font-medium text-gray-700 mb-1">
-                Testament
-              </label>
-              <select
-                id="testament"
-                value={testament}
-                onChange={(e) => setTestament(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value={0}>Old Testament</option>
-                <option value={1}>New Testament</option>
-              </select>
-            </div>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            <div className="flex space-x-4 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isSubmitting ? 'Creating...' : 'Create'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export function Books() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
-  const [editingBook, setEditingBook] = useState<Book | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [books, setBooks] = useState<Book[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -317,78 +60,6 @@ export function Books() {
     }
   };
 
-  const handleAddBook = async (name: string, chapters: number, testament: number) => {
-    try {
-      setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/bible-books`, {
-        book: name,
-        chapters,
-        testament
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      await fetchBooks(currentPage);
-      setShowAddModal(false);
-    } catch (err) {
-      console.error('Error adding book:', err);
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleEditBook = async (name: string, chapters: number, testament: number) => {
-    if (editingBook) {
-      try {
-        setIsSubmitting(true);
-        await axios.put(
-          `${ADMIN_BASE_URL}/bible-books/${editingBook.id}`,
-          {
-            book: name,
-            chapters,
-            testament
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            }
-          }
-        );
-        await fetchBooks(currentPage);
-        setEditingBook(null);
-      } catch (err) {
-        console.error('Error updating book:', err);
-        throw err;
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (selectedBook) {
-      try {
-        setIsDeleting(true);
-        await axios.delete(`${ADMIN_BASE_URL}/bible-books/${selectedBook.id}`, {
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        await fetchBooks(currentPage);
-        setSelectedBook(null);
-      } catch (err) {
-        console.error('Error deleting book:', err);
-        setError('Failed to delete book. Please try again later.');
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  };
-
   useEffect(() => {
     fetchBooks(currentPage);
   }, [currentPage]);
@@ -398,15 +69,18 @@ export function Books() {
     const pages: number[] = [];
     
     if (totalPages <= maxPages) {
+      // If total pages is less than max, show all pages
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
+      // Always include first page
       pages.push(1);
       
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
       
+      // Adjust start and end to always show 3 pages in the middle
       if (currentPage <= 2) {
         end = 3;
       }
@@ -414,18 +88,22 @@ export function Books() {
         start = totalPages - 2;
       }
       
+      // Add ellipsis if needed
       if (start > 2) {
-        pages.push(-1);
+        pages.push(-1); // -1 represents ellipsis
       }
       
+      // Add middle pages
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
       
+      // Add ellipsis if needed
       if (end < totalPages - 1) {
-        pages.push(-1);
+        pages.push(-1); // -1 represents ellipsis
       }
       
+      // Always include last page
       pages.push(totalPages);
     }
     
@@ -466,24 +144,15 @@ export function Books() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Bible Books</h1>
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search books..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
-            />
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add Book</span>
-          </button>
+        <div className="relative">
+          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search books..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
+          />
         </div>
       </div>
 
@@ -494,7 +163,6 @@ export function Books() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chapters</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Testament</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -514,22 +182,6 @@ export function Books() {
                   }`}>
                     {book.testament === "0" ? 'Old Testament' : 'New Testament'}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setEditingBook(book)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedBook(book)}
-                      className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </td>
               </tr>
             ))}
@@ -610,32 +262,6 @@ export function Books() {
           </div>
         )}
       </div>
-
-      {selectedBook && (
-        <DeleteModal
-          book={selectedBook}
-          onClose={() => setSelectedBook(null)}
-          onConfirm={handleDeleteConfirm}
-          isDeleting={isDeleting}
-        />
-      )}
-
-      {editingBook && (
-        <EditModal
-          book={editingBook}
-          onClose={() => setEditingBook(null)}
-          onConfirm={handleEditBook}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {showAddModal && (
-        <AddModal
-          onClose={() => setShowAddModal(false)}
-          onConfirm={handleAddBook}
-          isSubmitting={isSubmitting}
-        />
-      )}
     </div>
   );
 }
