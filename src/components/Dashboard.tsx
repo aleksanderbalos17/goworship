@@ -194,43 +194,43 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li className="relative">
               <button
-                onClick={() => setBooksMenuOpen(!booksMenuOpen)}
+                onClick={() => setEventsMenuOpen(!eventsMenuOpen)}
                 className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'books' || currentPage === 'bibles'
+                  currentPage === 'event-types' || currentPage === 'event-frequencies'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <Book className="w-5 h-5" />
-                  <span>Books</span>
+                  <Calendar className="w-5 h-5" />
+                  <span>Events</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${booksMenuOpen ? 'transform rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${eventsMenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
-              {booksMenuOpen && (
+              {eventsMenuOpen && (
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => setCurrentPage('books')}
+                      onClick={() => setCurrentPage('event-types')}
                       className={`w-full text-left py-2 text-sm ${
-                        currentPage === 'books'
+                        currentPage === 'event-types'
                           ? 'text-indigo-600'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Books
+                      Event Types
                     </button>
                   </li>
                   <li>
                     <button
-                      onClick={() => setCurrentPage('bibles')}
+                      onClick={() => setCurrentPage('event-frequencies')}
                       className={`w-full text-left py-2 text-sm ${
-                        currentPage === 'bibles'
+                        currentPage === 'event-frequencies'
                           ? 'text-indigo-600'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Bibles
+                      Event Frequencies
                     </button>
                   </li>
                 </ul>
@@ -282,43 +282,43 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li className="relative">
               <button
-                onClick={() => setEventsMenuOpen(!eventsMenuOpen)}
+                onClick={() => setBooksMenuOpen(!booksMenuOpen)}
                 className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'event-types' || currentPage === 'event-frequencies'
+                  currentPage === 'books' || currentPage === 'bibles'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5" />
-                  <span>Events</span>
+                  <Book className="w-5 h-5" />
+                  <span>Books</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${eventsMenuOpen ? 'transform rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${booksMenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
-              {eventsMenuOpen && (
+              {booksMenuOpen && (
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
-                      onClick={() => setCurrentPage('event-types')}
+                      onClick={() => setCurrentPage('books')}
                       className={`w-full text-left py-2 text-sm ${
-                        currentPage === 'event-types'
+                        currentPage === 'books'
                           ? 'text-indigo-600'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Event Types
+                      Books
                     </button>
                   </li>
                   <li>
                     <button
-                      onClick={() => setCurrentPage('event-frequencies')}
+                      onClick={() => setCurrentPage('bibles')}
                       className={`w-full text-left py-2 text-sm ${
-                        currentPage === 'event-frequencies'
+                        currentPage === 'bibles'
                           ? 'text-indigo-600'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      Event Frequencies
+                      Bibles
                     </button>
                   </li>
                 </ul>
