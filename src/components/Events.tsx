@@ -318,12 +318,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     freq.active === "1" && freq.showme === "1"
   );
 
-  // Filter churches based on search term and limit to 5 items
-  const filteredChurches = churches
-    .filter(church => 
-      church.name.toLowerCase().includes(churchSearch.toLowerCase())
-    )
-    .slice(0, 5);
+  // Filter churches based on search term - show ALL matching churches, not limited to 5
+  const filteredChurches = churches.filter(church => 
+    church.name.toLowerCase().includes(churchSearch.toLowerCase())
+  );
 
   const handleChurchSelect = (church: Church) => {
     setSelectedChurch(church);
@@ -338,6 +336,19 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setSelectedChurch(null);
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.church-dropdown-container')) {
+        setShowChurchDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -436,7 +447,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 />
               </div>
 
-              <div className="relative">
+              <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
                   Church
                 </label>
@@ -453,26 +464,29 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
                   {showChurchDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredChurches.length > 0 ? (
-                        filteredChurches.map((church) => (
-                          <button
-                            key={church.id}
-                            type="button"
-                            onClick={() => handleChurchSelect(church)}
-                            className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="font-medium text-gray-900">{church.name}</div>
-                            {church.address && (
-                              <div className="text-sm text-gray-500 mt-1">{church.address}</div>
-                            )}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {churchSearch ? 'No churches found' : 'Start typing to search churches'}
-                        </div>
-                      )}
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      {/* Set max height to show approximately 5 items (each item ~60px) */}
+                      <div className="max-h-80 overflow-y-auto">
+                        {filteredChurches.length > 0 ? (
+                          filteredChurches.map((church) => (
+                            <button
+                              key={church.id}
+                              type="button"
+                              onClick={() => handleChurchSelect(church)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{church.name}</div>
+                              {church.address && (
+                                <div className="text-sm text-gray-500 mt-1">{church.address}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {churchSearch ? 'No churches found' : 'Start typing to search churches'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
