@@ -17,6 +17,16 @@ interface Event {
   locationAddress: string;
 }
 
+interface EventFrequency {
+  id: string;
+  name: string;
+  active: string;
+  notes: string;
+  showme: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
 interface DeleteModalProps {
   event: Event;
   onClose: () => void;
@@ -35,6 +45,7 @@ interface AddModalProps {
   onClose: () => void;
   onConfirm: (eventData: Omit<Event, 'id'>) => Promise<void>;
   isSubmitting: boolean;
+  eventFrequencies: EventFrequency[];
 }
 
 function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -231,12 +242,13 @@ function EditModal({ event, onClose, onConfirm, isSubmitting }: EditModalProps) 
   );
 }
 
-function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
+function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddModalProps) {
   const [name, setName] = useState('');
   const [eventType, setEventType] = useState('Service');
   const [day, setDay] = useState(0);
   const [time, setTime] = useState(600); // 10:00 AM
   const [duration, setDuration] = useState(60);
+  const [eventFrequencyId, setEventFrequencyId] = useState('');
   const [additionalText, setAdditionalText] = useState('');
   const [error, setError] = useState('');
 
@@ -244,6 +256,10 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
     e.preventDefault();
     if (!name.trim()) {
       setError('Event name is required');
+      return;
+    }
+    if (!eventFrequencyId) {
+      setError('Please select an event frequency');
       return;
     }
     try {
@@ -254,7 +270,7 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
         time,
         duration,
         churchLocationId: 'loc-1', // This would come from a church/location selector
-        eventFrequencyId: 'freq-1', // This would come from a frequency selector
+        eventFrequencyId,
         additionalText,
         churchName: 'Sample Church', // This would be populated based on selection
         locationAddress: 'Sample Address' // This would be populated based on selection
@@ -275,6 +291,11 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
     const [hours, minutes] = timeString.split(':').map(Number);
     return hours * 60 + minutes;
   };
+
+  // Filter active frequencies that should be shown
+  const availableFrequencies = eventFrequencies.filter(freq => 
+    freq.active === "1" && freq.showme === "1"
+  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -394,12 +415,16 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
                 </label>
                 <select
                   id="frequency"
+                  value={eventFrequencyId}
+                  onChange={(e) => setEventFrequencyId(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="">Select frequency</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="one-time">One Time</option>
+                  {availableFrequencies.map((frequency) => (
+                    <option key={frequency.id} value={frequency.id}>
+                      {frequency.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -493,6 +518,8 @@ export function Events() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
+  const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -510,6 +537,37 @@ export function Events() {
   }));
 
   const [events, setEvents] = useState<Event[]>(mockEvents);
+
+  // Fetch event frequencies when component mounts or when add modal is opened
+  const fetchEventFrequencies = async () => {
+    try {
+      setIsLoadingFrequencies(true);
+      const response = await axios.get(`${ADMIN_BASE_URL}/event-frequencies/all`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Handle different possible response structures
+      if (response.data.status === 'success' && response.data.data) {
+        setEventFrequencies(response.data.data.frequencies || response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setEventFrequencies(response.data);
+      } else {
+        console.warn('Unexpected response structure:', response.data);
+        setEventFrequencies([]);
+      }
+    } catch (err) {
+      console.error('Error fetching event frequencies:', err);
+      setEventFrequencies([]);
+    } finally {
+      setIsLoadingFrequencies(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEventFrequencies();
+  }, []);
 
   const itemsPerPage = 10;
   const filteredEvents = events.filter(event => 
@@ -753,6 +811,7 @@ export function Events() {
           onClose={() => setShowAddModal(false)}
           onConfirm={handleAddEvent}
           isSubmitting={isSubmitting}
+          eventFrequencies={eventFrequencies}
         />
       )}
     </div>
