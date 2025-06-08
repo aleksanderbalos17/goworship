@@ -262,7 +262,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   const [day, setDay] = useState(0);
   const [time, setTime] = useState(600); // 10:00 AM
   const [duration, setDuration] = useState(60);
-  const [eventFrequencyId, setEventFrequencyId] = useState('');
+  const [selectedFrequency, setSelectedFrequency] = useState<EventFrequency | null>(null);
+  const [frequencySearch, setFrequencySearch] = useState('');
+  const [showFrequencyDropdown, setShowFrequencyDropdown] = useState(false);
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null);
   const [churchSearch, setChurchSearch] = useState('');
   const [showChurchDropdown, setShowChurchDropdown] = useState(false);
@@ -275,7 +277,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setError('Event name is required');
       return;
     }
-    if (!eventFrequencyId) {
+    if (!selectedFrequency) {
       setError('Please select an event frequency');
       return;
     }
@@ -291,7 +293,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
         time,
         duration,
         churchLocationId: selectedChurch.id,
-        eventFrequencyId,
+        eventFrequencyId: selectedFrequency.id,
         additionalText,
         churchName: selectedChurch.name,
         locationAddress: selectedChurch.address || 'No address provided'
@@ -313,15 +315,31 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     return hours * 60 + minutes;
   };
 
-  // Filter active frequencies that should be shown
-  const availableFrequencies = eventFrequencies.filter(freq => 
-    freq.active === "1" && freq.showme === "1"
+  // Filter active frequencies that should be shown - show ALL matching frequencies, not limited to 5
+  const filteredFrequencies = eventFrequencies.filter(freq => 
+    freq.active === "1" && 
+    freq.showme === "1" &&
+    freq.name.toLowerCase().includes(frequencySearch.toLowerCase())
   );
 
   // Filter churches based on search term - show ALL matching churches, not limited to 5
   const filteredChurches = churches.filter(church => 
     church.name.toLowerCase().includes(churchSearch.toLowerCase())
   );
+
+  const handleFrequencySelect = (frequency: EventFrequency) => {
+    setSelectedFrequency(frequency);
+    setFrequencySearch(frequency.name);
+    setShowFrequencyDropdown(false);
+  };
+
+  const handleFrequencySearchChange = (value: string) => {
+    setFrequencySearch(value);
+    setShowFrequencyDropdown(true);
+    if (!value) {
+      setSelectedFrequency(null);
+    }
+  };
 
   const handleChurchSelect = (church: Church) => {
     setSelectedChurch(church);
@@ -337,10 +355,13 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     }
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
+      if (!target.closest('.frequency-dropdown-container')) {
+        setShowFrequencyDropdown(false);
+      }
       if (!target.closest('.church-dropdown-container')) {
         setShowChurchDropdown(false);
       }
@@ -492,23 +513,49 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 </div>
               </div>
 
-              <div>
+              <div className="relative frequency-dropdown-container">
                 <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
                   Frequency
                 </label>
-                <select
-                  id="frequency"
-                  value={eventFrequencyId}
-                  onChange={(e) => setEventFrequencyId(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Select frequency</option>
-                  {availableFrequencies.map((frequency) => (
-                    <option key={frequency.id} value={frequency.id}>
-                      {frequency.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="frequency"
+                    value={frequencySearch}
+                    onChange={(e) => handleFrequencySearchChange(e.target.value)}
+                    onFocus={() => setShowFrequencyDropdown(true)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search and select frequency"
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  
+                  {showFrequencyDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      {/* Set max height to show approximately 5 items (each item ~60px) */}
+                      <div className="max-h-80 overflow-y-auto">
+                        {filteredFrequencies.length > 0 ? (
+                          filteredFrequencies.map((frequency) => (
+                            <button
+                              key={frequency.id}
+                              type="button"
+                              onClick={() => handleFrequencySelect(frequency)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{frequency.name}</div>
+                              {frequency.notes && (
+                                <div className="text-sm text-gray-500 mt-1">{frequency.notes}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {frequencySearch ? 'No frequencies found' : 'Start typing to search frequencies'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
