@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { ADMIN_BASE_URL } from '../constants/api';
 
@@ -27,6 +27,19 @@ interface EventFrequency {
   updated_at: string | null;
 }
 
+interface Church {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  address: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  created_at: string;
+  updated_at: string;
+  speakers: string | null;
+  denomination_id: string;
+}
+
 interface DeleteModalProps {
   event: Event;
   onClose: () => void;
@@ -46,6 +59,7 @@ interface AddModalProps {
   onConfirm: (eventData: Omit<Event, 'id'>) => Promise<void>;
   isSubmitting: boolean;
   eventFrequencies: EventFrequency[];
+  churches: Church[];
 }
 
 function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -242,13 +256,16 @@ function EditModal({ event, onClose, onConfirm, isSubmitting }: EditModalProps) 
   );
 }
 
-function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddModalProps) {
+function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches }: AddModalProps) {
   const [name, setName] = useState('');
   const [eventType, setEventType] = useState('Service');
   const [day, setDay] = useState(0);
   const [time, setTime] = useState(600); // 10:00 AM
   const [duration, setDuration] = useState(60);
   const [eventFrequencyId, setEventFrequencyId] = useState('');
+  const [selectedChurch, setSelectedChurch] = useState<Church | null>(null);
+  const [churchSearch, setChurchSearch] = useState('');
+  const [showChurchDropdown, setShowChurchDropdown] = useState(false);
   const [additionalText, setAdditionalText] = useState('');
   const [error, setError] = useState('');
 
@@ -262,6 +279,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddMod
       setError('Please select an event frequency');
       return;
     }
+    if (!selectedChurch) {
+      setError('Please select a church');
+      return;
+    }
     try {
       await onConfirm({
         name,
@@ -269,11 +290,11 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddMod
         day,
         time,
         duration,
-        churchLocationId: 'loc-1', // This would come from a church/location selector
+        churchLocationId: selectedChurch.id,
         eventFrequencyId,
         additionalText,
-        churchName: 'Sample Church', // This would be populated based on selection
-        locationAddress: 'Sample Address' // This would be populated based on selection
+        churchName: selectedChurch.name,
+        locationAddress: selectedChurch.address || 'No address provided'
       });
       onClose();
     } catch (err) {
@@ -296,6 +317,27 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddMod
   const availableFrequencies = eventFrequencies.filter(freq => 
     freq.active === "1" && freq.showme === "1"
   );
+
+  // Filter churches based on search term and limit to 5 items
+  const filteredChurches = churches
+    .filter(church => 
+      church.name.toLowerCase().includes(churchSearch.toLowerCase())
+    )
+    .slice(0, 5);
+
+  const handleChurchSelect = (church: Church) => {
+    setSelectedChurch(church);
+    setChurchSearch(church.name);
+    setShowChurchDropdown(false);
+  };
+
+  const handleChurchSearchChange = (value: string) => {
+    setChurchSearch(value);
+    setShowChurchDropdown(true);
+    if (!value) {
+      setSelectedChurch(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -394,19 +436,46 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddMod
                 />
               </div>
 
-              <div>
+              <div className="relative">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
                   Church
                 </label>
-                <select
-                  id="church"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="">Select a church</option>
-                  <option value="church-1">Sample Church 1</option>
-                  <option value="church-2">Sample Church 2</option>
-                  <option value="church-3">Sample Church 3</option>
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="church"
+                    value={churchSearch}
+                    onChange={(e) => handleChurchSearchChange(e.target.value)}
+                    onFocus={() => setShowChurchDropdown(true)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search and select a church"
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  
+                  {showChurchDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredChurches.length > 0 ? (
+                        filteredChurches.map((church) => (
+                          <button
+                            key={church.id}
+                            type="button"
+                            onClick={() => handleChurchSelect(church)}
+                            className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-900">{church.name}</div>
+                            {church.address && (
+                              <div className="text-sm text-gray-500 mt-1">{church.address}</div>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          {churchSearch ? 'No churches found' : 'Start typing to search churches'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -435,8 +504,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies }: AddMod
                 <input
                   type="text"
                   id="location"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter location address"
+                  value={selectedChurch?.address || ''}
+                  readOnly
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  placeholder="Location will be filled based on church selection"
                 />
               </div>
 
@@ -519,7 +590,9 @@ export function Events() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
+  const [churches, setChurches] = useState<Church[]>([]);
   const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
+  const [isLoadingChurches, setIsLoadingChurches] = useState(false);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -538,7 +611,7 @@ export function Events() {
 
   const [events, setEvents] = useState<Event[]>(mockEvents);
 
-  // Fetch event frequencies when component mounts or when add modal is opened
+  // Fetch event frequencies when component mounts
   const fetchEventFrequencies = async () => {
     try {
       setIsLoadingFrequencies(true);
@@ -565,8 +638,36 @@ export function Events() {
     }
   };
 
+  // Fetch churches when component mounts
+  const fetchChurches = async () => {
+    try {
+      setIsLoadingChurches(true);
+      const response = await axios.get(`${ADMIN_BASE_URL}/churches/all`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Handle different possible response structures
+      if (response.data.status === 'success' && response.data.data) {
+        setChurches(response.data.data.churches || response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setChurches(response.data);
+      } else {
+        console.warn('Unexpected response structure:', response.data);
+        setChurches([]);
+      }
+    } catch (err) {
+      console.error('Error fetching churches:', err);
+      setChurches([]);
+    } finally {
+      setIsLoadingChurches(false);
+    }
+  };
+
   useEffect(() => {
     fetchEventFrequencies();
+    fetchChurches();
   }, []);
 
   const itemsPerPage = 10;
@@ -812,6 +913,7 @@ export function Events() {
           onConfirm={handleAddEvent}
           isSubmitting={isSubmitting}
           eventFrequencies={eventFrequencies}
+          churches={churches}
         />
       )}
     </div>
