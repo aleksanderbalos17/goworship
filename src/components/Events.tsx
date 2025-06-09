@@ -269,8 +269,11 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [eventTypeSearch, setEventTypeSearch] = useState('');
   const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
-  const [day, setDay] = useState(0);
-  const [time, setTime] = useState(600); // 10:00 AM
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [selectedTime, setSelectedTime] = useState('10:00');
   const [duration, setDuration] = useState(60);
   const [selectedFrequency, setSelectedFrequency] = useState<EventFrequency | null>(null);
   const [frequencySearch, setFrequencySearch] = useState('');
@@ -300,11 +303,19 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       return;
     }
     try {
+      // Convert date to day of week (0 = Sunday, 1 = Monday, etc.)
+      const eventDate = new Date(selectedDate);
+      const dayOfWeek = eventDate.getDay();
+      
+      // Convert time to minutes
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const timeInMinutes = hours * 60 + minutes;
+
       await onConfirm({
         name,
         eventType: selectedEventType.name,
-        day,
-        time,
+        day: dayOfWeek,
+        time: timeInMinutes,
         duration,
         churchLocationId: selectedChurch.id,
         eventFrequencyId: selectedFrequency.id,
@@ -316,17 +327,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     } catch (err) {
       setError('Failed to create event');
     }
-  };
-
-  const formatTimeForInput = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  };
-
-  const parseTimeFromInput = (timeString: string): number => {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return hours * 60 + minutes;
   };
 
   // Filter event types based on search term and sort by name
@@ -411,9 +411,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-8">
             <h3 className="text-2xl font-semibold text-gray-900">Add New Event</h3>
             <button
               onClick={onClose}
@@ -426,7 +426,8 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
           </div>
           
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Row 1: Event Name / Event Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                   Event Name
@@ -459,7 +460,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   
                   {showEventTypeDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                      <div className="max-h-80 overflow-y-auto">
+                      <div className="max-h-40 overflow-y-auto">
                         {filteredEventTypes.length > 0 ? (
                           filteredEventTypes.map((eventType) => (
                             <button
@@ -481,38 +482,30 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   )}
                 </div>
               </div>
+            </div>
 
+            {/* Row 2: Date and Time / Duration / Frequency */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
-                <label htmlFor="day" className="block text-sm font-medium text-gray-700 mb-2">
-                  Day of Week
+                <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date and Time
                 </label>
-                <select
-                  id="day"
-                  value={day}
-                  onChange={(e) => setDay(parseInt(e.target.value))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value={0}>Sunday</option>
-                  <option value={1}>Monday</option>
-                  <option value={2}>Tuesday</option>
-                  <option value={3}>Wednesday</option>
-                  <option value={4}>Thursday</option>
-                  <option value={5}>Friday</option>
-                  <option value={6}>Saturday</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Time
-                </label>
-                <input
-                  type="time"
-                  id="time"
-                  value={formatTimeForInput(time)}
-                  onChange={(e) => setTime(parseTimeFromInput(e.target.value))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    id="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <input
+                    type="time"
+                    id="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -530,6 +523,53 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 />
               </div>
 
+              <div className="relative frequency-dropdown-container">
+                <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
+                  Frequency
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="frequency"
+                    value={frequencySearch}
+                    onChange={(e) => handleFrequencySearchChange(e.target.value)}
+                    onFocus={() => setShowFrequencyDropdown(true)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search and select frequency"
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  
+                  {showFrequencyDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredFrequencies.length > 0 ? (
+                          filteredFrequencies.map((frequency) => (
+                            <button
+                              key={frequency.id}
+                              type="button"
+                              onClick={() => handleFrequencySelect(frequency)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{frequency.name}</div>
+                              {frequency.notes && (
+                                <div className="text-sm text-gray-500 mt-1">{frequency.notes}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {frequencySearch ? 'No frequencies found' : 'Start typing to search frequencies'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Church / Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
                   Church
@@ -548,7 +588,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   
                   {showChurchDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                      <div className="max-h-80 overflow-y-auto">
+                      <div className="max-h-40 overflow-y-auto">
                         {filteredChurches.length > 0 ? (
                           filteredChurches.map((church) => (
                             <button
@@ -574,50 +614,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 </div>
               </div>
 
-              <div className="relative frequency-dropdown-container">
-                <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
-                  Frequency
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="frequency"
-                    value={frequencySearch}
-                    onChange={(e) => handleFrequencySearchChange(e.target.value)}
-                    onFocus={() => setShowFrequencyDropdown(true)}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder="Search and select frequency"
-                  />
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  
-                  {showFrequencyDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                      <div className="max-h-80 overflow-y-auto">
-                        {filteredFrequencies.length > 0 ? (
-                          filteredFrequencies.map((frequency) => (
-                            <button
-                              key={frequency.id}
-                              type="button"
-                              onClick={() => handleFrequencySelect(frequency)}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-900">{frequency.name}</div>
-                              {frequency.notes && (
-                                <div className="text-sm text-gray-500 mt-1">{frequency.notes}</div>
-                              )}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-4 py-3 text-gray-500 text-center">
-                            {frequencySearch ? 'No frequencies found' : 'Start typing to search frequencies'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
                   Location
@@ -631,21 +627,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   placeholder="Location will be filled based on church selection"
                 />
               </div>
-
-              <div>
-                <label htmlFor="organizer" className="block text-sm font-medium text-gray-700 mb-2">
-                  Organizer
-                </label>
-                <input
-                  type="text"
-                  id="organizer"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter organizer name"
-                />
-              </div>
             </div>
 
-            <div className="mt-6">
+            {/* Additional Notes */}
+            <div className="mb-6">
               <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Notes
               </label>
@@ -660,12 +645,12 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
             </div>
 
             {error && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
-            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={onClose}
