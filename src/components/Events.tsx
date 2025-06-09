@@ -40,6 +40,13 @@ interface Church {
   denomination_id: string;
 }
 
+interface EventType {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
 interface DeleteModalProps {
   event: Event;
   onClose: () => void;
@@ -60,6 +67,7 @@ interface AddModalProps {
   isSubmitting: boolean;
   eventFrequencies: EventFrequency[];
   churches: Church[];
+  eventTypes: EventType[];
 }
 
 function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -256,9 +264,11 @@ function EditModal({ event, onClose, onConfirm, isSubmitting }: EditModalProps) 
   );
 }
 
-function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches }: AddModalProps) {
+function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches, eventTypes }: AddModalProps) {
   const [name, setName] = useState('');
-  const [eventType, setEventType] = useState('Service');
+  const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
+  const [eventTypeSearch, setEventTypeSearch] = useState('');
+  const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
   const [day, setDay] = useState(0);
   const [time, setTime] = useState(600); // 10:00 AM
   const [duration, setDuration] = useState(60);
@@ -277,6 +287,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setError('Event name is required');
       return;
     }
+    if (!selectedEventType) {
+      setError('Please select an event type');
+      return;
+    }
     if (!selectedFrequency) {
       setError('Please select an event frequency');
       return;
@@ -288,7 +302,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     try {
       await onConfirm({
         name,
-        eventType,
+        eventType: selectedEventType.name,
         day,
         time,
         duration,
@@ -315,17 +329,36 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     return hours * 60 + minutes;
   };
 
-  // Filter active frequencies that should be shown - show ALL matching frequencies, not limited to 5
+  // Filter event types based on search term
+  const filteredEventTypes = eventTypes.filter(type => 
+    type.name.toLowerCase().includes(eventTypeSearch.toLowerCase())
+  );
+
+  // Filter active frequencies that should be shown
   const filteredFrequencies = eventFrequencies.filter(freq => 
     freq.active === "1" && 
     freq.showme === "1" &&
     freq.name.toLowerCase().includes(frequencySearch.toLowerCase())
   );
 
-  // Filter churches based on search term - show ALL matching churches, not limited to 5
+  // Filter churches based on search term
   const filteredChurches = churches.filter(church => 
     church.name.toLowerCase().includes(churchSearch.toLowerCase())
   );
+
+  const handleEventTypeSelect = (eventType: EventType) => {
+    setSelectedEventType(eventType);
+    setEventTypeSearch(eventType.name);
+    setShowEventTypeDropdown(false);
+  };
+
+  const handleEventTypeSearchChange = (value: string) => {
+    setEventTypeSearch(value);
+    setShowEventTypeDropdown(true);
+    if (!value) {
+      setSelectedEventType(null);
+    }
+  };
 
   const handleFrequencySelect = (frequency: EventFrequency) => {
     setSelectedFrequency(frequency);
@@ -359,6 +392,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
+      if (!target.closest('.event-type-dropdown-container')) {
+        setShowEventTypeDropdown(false);
+      }
       if (!target.closest('.frequency-dropdown-container')) {
         setShowFrequencyDropdown(false);
       }
@@ -403,21 +439,45 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 />
               </div>
 
-              <div>
+              <div className="relative event-type-dropdown-container">
                 <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">
                   Event Type
                 </label>
-                <select
-                  id="eventType"
-                  value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="Service">Service</option>
-                  <option value="Prayer Meeting">Prayer Meeting</option>
-                  <option value="Bible Study">Bible Study</option>
-                  <option value="Youth Group">Youth Group</option>
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="eventType"
+                    value={eventTypeSearch}
+                    onChange={(e) => handleEventTypeSearchChange(e.target.value)}
+                    onFocus={() => setShowEventTypeDropdown(true)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search and select event type"
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  
+                  {showEventTypeDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-80 overflow-y-auto">
+                        {filteredEventTypes.length > 0 ? (
+                          filteredEventTypes.map((eventType) => (
+                            <button
+                              key={eventType.id}
+                              type="button"
+                              onClick={() => handleEventTypeSelect(eventType)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{eventType.name}</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {eventTypeSearch ? 'No event types found' : 'Start typing to search event types'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -486,7 +546,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   
                   {showChurchDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                      {/* Set max height to show approximately 5 items (each item ~60px) */}
                       <div className="max-h-80 overflow-y-auto">
                         {filteredChurches.length > 0 ? (
                           filteredChurches.map((church) => (
@@ -531,7 +590,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   
                   {showFrequencyDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-                      {/* Set max height to show approximately 5 items (each item ~60px) */}
                       <div className="max-h-80 overflow-y-auto">
                         {filteredFrequencies.length > 0 ? (
                           filteredFrequencies.map((frequency) => (
@@ -652,8 +710,10 @@ export function Events() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
   const [churches, setChurches] = useState<Church[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
   const [isLoadingChurches, setIsLoadingChurches] = useState(false);
+  const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -671,6 +731,33 @@ export function Events() {
   }));
 
   const [events, setEvents] = useState<Event[]>(mockEvents);
+
+  // Fetch event types when component mounts
+  const fetchEventTypes = async () => {
+    try {
+      setIsLoadingEventTypes(true);
+      const response = await axios.get(`${ADMIN_BASE_URL}/event-types/all`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Handle different possible response structures
+      if (response.data.status === 'success' && response.data.data) {
+        setEventTypes(response.data.data.event_types || response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setEventTypes(response.data);
+      } else {
+        console.warn('Unexpected response structure:', response.data);
+        setEventTypes([]);
+      }
+    } catch (err) {
+      console.error('Error fetching event types:', err);
+      setEventTypes([]);
+    } finally {
+      setIsLoadingEventTypes(false);
+    }
+  };
 
   // Fetch event frequencies when component mounts
   const fetchEventFrequencies = async () => {
@@ -727,6 +814,7 @@ export function Events() {
   };
 
   useEffect(() => {
+    fetchEventTypes();
     fetchEventFrequencies();
     fetchChurches();
   }, []);
@@ -975,6 +1063,7 @@ export function Events() {
           isSubmitting={isSubmitting}
           eventFrequencies={eventFrequencies}
           churches={churches}
+          eventTypes={eventTypes}
         />
       )}
     </div>
