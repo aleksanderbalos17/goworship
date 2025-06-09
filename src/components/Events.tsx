@@ -329,10 +329,12 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     return hours * 60 + minutes;
   };
 
-  // Filter event types based on search term
-  const filteredEventTypes = eventTypes.filter(type => 
-    type.name.toLowerCase().includes(eventTypeSearch.toLowerCase())
-  );
+  // Filter event types based on search term and sort by name
+  const filteredEventTypes = eventTypes
+    .filter(type => 
+      type.name.toLowerCase().includes(eventTypeSearch.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Filter active frequencies that should be shown
   const filteredFrequencies = eventFrequencies.filter(freq => 
@@ -743,14 +745,19 @@ export function Events() {
       });
       
       // Handle different possible response structures
+      let eventTypesData: EventType[] = [];
       if (response.data.status === 'success' && response.data.data) {
-        setEventTypes(response.data.data.event_types || response.data.data);
+        eventTypesData = response.data.data.event_types || response.data.data;
       } else if (Array.isArray(response.data)) {
-        setEventTypes(response.data);
+        eventTypesData = response.data;
       } else {
         console.warn('Unexpected response structure:', response.data);
-        setEventTypes([]);
+        eventTypesData = [];
       }
+      
+      // Sort event types by name
+      eventTypesData.sort((a, b) => a.name.localeCompare(b.name));
+      setEventTypes(eventTypesData);
     } catch (err) {
       console.error('Error fetching event types:', err);
       setEventTypes([]);
