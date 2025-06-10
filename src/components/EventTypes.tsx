@@ -285,7 +285,7 @@ export function EventTypes() {
       try {
         setIsSubmitting(true);
         await axios.put(
-          `${ADMIN_BASE_URL}/event-types/${editingEventType.id}`,
+          `${ADMIN_BASE_URL}/event-types/edit/${editingEventType.id}`,
           { name },
           {
             headers: {
