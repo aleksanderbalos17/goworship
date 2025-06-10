@@ -780,17 +780,21 @@ export function Churches() {
                   <div className="text-sm font-medium text-gray-900">{church.name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {church.photo_url ? (
+                  {church.photo_url && church.photo_url.trim() !== '' ? (
                     <img
                       src={church.photo_url}
                       alt={church.name}
                       className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                      onError={(e) => {
+                        console.log('Image failed to load:', church.photo_url);
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <span className="text-gray-400 text-xs">No photo</span>
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center ${church.photo_url && church.photo_url.trim() !== '' ? 'hidden' : ''}`}>
+                    <span className="text-gray-400 text-xs">No photo</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 max-w-xs truncate">
