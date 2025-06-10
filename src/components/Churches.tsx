@@ -50,9 +50,19 @@ interface DeleteModalProps {
 
 interface AddChurchModalProps {
   onClose: () => void;
-  onConfirm: (churchData: Omit<Church, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  onConfirm: (churchData: ChurchFormData) => Promise<void>;
   isSubmitting: boolean;
   denominations: Denomination[];
+}
+
+interface ChurchFormData {
+  name: string;
+  photo_url: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  speakers: string | null;
+  denomination_id: number;
 }
 
 function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -209,14 +219,14 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
     }
 
     try {
-      const churchData = {
+      const churchData: ChurchFormData = {
         name: name.trim(),
         photo_url: uploadedPhotoUrl,
         address: address.trim() || null,
-        latitude: latitude || null,
-        longitude: longitude || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
         speakers: speakers.trim() || null,
-        denomination_id: selectedDenomination.id
+        denomination_id: parseInt(selectedDenomination.id)
       };
 
       await onConfirm(churchData);
@@ -556,20 +566,41 @@ export function Churches() {
     fetchDenominations();
   }, [currentPage]);
 
-  const handleAddChurch = async (churchData: Omit<Church, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleAddChurch = async (churchData: ChurchFormData) => {
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/churches`, churchData, {
+      
+      // Make API call to save the church
+      const response = await axios.post(`${ADMIN_BASE_URL}/churches`, churchData, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
-      await fetchChurches(currentPage);
-      setShowAddModal(false);
-    } catch (err) {
+
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        // Refresh the churches list to show the new church
+        await fetchChurches(currentPage);
+        setShowAddModal(false);
+      } else {
+        throw new Error('Failed to create church');
+      }
+    } catch (err: any) {
       console.error('Error adding church:', err);
-      throw err;
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create church. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -664,6 +695,15 @@ export function Churches() {
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              fetchChurches(currentPage);
+            }}
+            className="mt-2 text-sm text-indigo-600 hover:text-indigo-800"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
