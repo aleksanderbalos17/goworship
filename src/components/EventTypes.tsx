@@ -348,16 +348,46 @@ export function EventTypes() {
     if (selectedEventType) {
       try {
         setIsDeleting(true);
-        await axios.delete(`${ADMIN_BASE_URL}/event-types/${selectedEventType.id}`, {
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', selectedEventType.id);
+        
+        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-types/delete`);
+        console.log('Form data - id:', selectedEventType.id);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/event-types/delete`, formData, {
           headers: {
+            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json'
           }
         });
-        await fetchEventTypes(currentPage);
-        setSelectedEventType(null);
-      } catch (err) {
+        
+        console.log('API Response:', response);
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchEventTypes(currentPage);
+          setSelectedEventType(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to delete event type');
+        }
+      } catch (err: any) {
         console.error('Error deleting event type:', err);
-        setError('Failed to delete event type. Please try again later.');
+        console.error('Error response:', err.response);
+        
+        // Extract error message from response
+        let errorMessage = 'Failed to delete event type. Please try again later.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setIsDeleting(false);
       }
