@@ -830,6 +830,7 @@ export function Events() {
   const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
   const [isLoadingChurches, setIsLoadingChurches] = useState(false);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -956,6 +957,7 @@ export function Events() {
   const handleAddEvent = async (eventData: Omit<Event, 'id'>) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       
       // Create FormData object for form-data request
       const formData = new FormData();
@@ -969,24 +971,56 @@ export function Events() {
       formData.append('event_frequency_id', eventData.eventFrequencyId);
       formData.append('additional_text', eventData.additionalText);
       
-      // TODO: Replace with actual API call
-      // const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
-      //   headers: {
-      //     'Content-Type': 'multipart/form-data',
-      //     'Accept': 'application/json'
-      //   }
-      // });
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/events/create`);
+      console.log('Form data:', {
+        name: eventData.name,
+        event_type: eventData.eventType,
+        date: eventData.date,
+        time: eventData.time,
+        duration: eventData.duration.toString(),
+        church_id: eventData.church_id,
+        location_id: eventData.location_id,
+        event_frequency_id: eventData.eventFrequencyId,
+        additional_text: eventData.additionalText
+      });
       
-      // For now, add to local state with a new ID
-      const newEvent: Event = {
-        ...eventData,
-        id: `${Date.now()}`
-      };
-      setEvents([...events, newEvent]);
-      setShowAddModal(false);
-    } catch (err) {
+      const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('API Response:', response);
+      
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        // For now, add to local state with a new ID (replace with actual API response)
+        const newEvent: Event = {
+          ...eventData,
+          id: `${Date.now()}`
+        };
+        setEvents([...events, newEvent]);
+        setShowAddModal(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to create event');
+      }
+    } catch (err: any) {
       console.error('Error adding event:', err);
-      throw err;
+      console.error('Error response:', err.response);
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create event. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -1083,6 +1117,12 @@ export function Events() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
