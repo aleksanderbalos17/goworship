@@ -86,7 +86,12 @@ function EditModal({ eventType, onClose, onConfirm, isSubmitting }: EditModalPro
       setError('Event type name is required');
       return;
     }
-    await onConfirm(name);
+    try {
+      await onConfirm(name.trim());
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update event type');
+    }
   };
 
   return (
@@ -284,21 +289,55 @@ export function EventTypes() {
     if (editingEventType) {
       try {
         setIsSubmitting(true);
-        await axios.put(
-          `${ADMIN_BASE_URL}/event-types/edit/${editingEventType.id}`,
-          { name },
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', editingEventType.id);
+        formData.append('name', name);
+        
+        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-types/edit`);
+        console.log('Form data:', {
+          id: editingEventType.id,
+          name: name
+        });
+        
+        const response = await axios.post(
+          `${ADMIN_BASE_URL}/event-types/edit`,
+          formData,
           {
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'multipart/form-data',
               'Accept': 'application/json'
             }
           }
         );
-        await fetchEventTypes(currentPage);
-        setEditingEventType(null);
-      } catch (err) {
+        
+        console.log('API Response:', response);
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchEventTypes(currentPage);
+          setEditingEventType(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to update event type');
+        }
+      } catch (err: any) {
         console.error('Error updating event type:', err);
-        throw err;
+        console.error('Error response:', err.response);
+        
+        // Extract error message from response
+        let errorMessage = 'Failed to update event type. Please try again.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setIsSubmitting(false);
       }
