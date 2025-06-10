@@ -10,7 +10,8 @@ interface Event {
   day: number;
   time: number;
   duration: number;
-  churchLocationId: string;
+  church_id: string;
+  location_id: string;
   eventFrequencyId: string;
   additionalText: string;
   churchName: string;
@@ -38,6 +39,17 @@ interface Church {
   updated_at: string;
   speakers: string | null;
   denomination_id: string;
+}
+
+interface Location {
+  id: string;
+  church_id: string;
+  name: string;
+  address: string;
+  latitude: string | null;
+  longitude: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
 interface EventType {
@@ -281,8 +293,58 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null);
   const [churchSearch, setChurchSearch] = useState('');
   const [showChurchDropdown, setShowChurchDropdown] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [additionalText, setAdditionalText] = useState('');
   const [error, setError] = useState('');
+
+  // Fetch locations when church is selected
+  const fetchLocations = async (churchId: string) => {
+    try {
+      setIsLoadingLocations(true);
+      const response = await axios.get(`${ADMIN_BASE_URL}/church-locations/all`, {
+        params: {
+          church_id: churchId
+        },
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Handle different possible response structures
+      let locationsData: Location[] = [];
+      if (response.data.status === 'success' && response.data.data) {
+        locationsData = response.data.data.locations || response.data.data;
+      } else if (Array.isArray(response.data)) {
+        locationsData = response.data;
+      } else {
+        console.warn('Unexpected response structure:', response.data);
+        locationsData = [];
+      }
+      
+      setLocations(locationsData);
+      
+      // Auto-select first location if available
+      if (locationsData.length > 0) {
+        const firstLocation = locationsData[0];
+        setSelectedLocation(firstLocation);
+        setLocationSearch(firstLocation.name);
+      } else {
+        setSelectedLocation(null);
+        setLocationSearch('');
+      }
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+      setLocations([]);
+      setSelectedLocation(null);
+      setLocationSearch('');
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,6 +364,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setError('Please select a church');
       return;
     }
+    if (!selectedLocation) {
+      setError('Please select a location');
+      return;
+    }
     try {
       // Convert date to day of week (0 = Sunday, 1 = Monday, etc.)
       const eventDate = new Date(selectedDate);
@@ -317,11 +383,12 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
         day: dayOfWeek,
         time: timeInMinutes,
         duration,
-        churchLocationId: selectedChurch.id,
+        church_id: selectedChurch.id,
+        location_id: selectedLocation.id,
         eventFrequencyId: selectedFrequency.id,
         additionalText,
         churchName: selectedChurch.name,
-        locationAddress: selectedChurch.address || 'No address provided'
+        locationAddress: selectedLocation.address
       });
       onClose();
     } catch (err) {
@@ -346,6 +413,11 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   // Filter churches based on search term
   const filteredChurches = churches.filter(church => 
     church.name.toLowerCase().includes(churchSearch.toLowerCase())
+  );
+
+  // Filter locations based on search term
+  const filteredLocations = locations.filter(location => 
+    location.name.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
   const handleEventTypeSelect = (eventType: EventType) => {
@@ -380,6 +452,14 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     setSelectedChurch(church);
     setChurchSearch(church.name);
     setShowChurchDropdown(false);
+    
+    // Reset location selection and fetch new locations
+    setSelectedLocation(null);
+    setLocationSearch('');
+    setLocations([]);
+    
+    // Fetch locations for this church
+    fetchLocations(church.id);
   };
 
   const handleChurchSearchChange = (value: string) => {
@@ -387,6 +467,23 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     setShowChurchDropdown(true);
     if (!value) {
       setSelectedChurch(null);
+      setSelectedLocation(null);
+      setLocationSearch('');
+      setLocations([]);
+    }
+  };
+
+  const handleLocationSelect = (location: Location) => {
+    setSelectedLocation(location);
+    setLocationSearch(location.name);
+    setShowLocationDropdown(false);
+  };
+
+  const handleLocationSearchChange = (value: string) => {
+    setLocationSearch(value);
+    setShowLocationDropdown(true);
+    if (!value) {
+      setSelectedLocation(null);
     }
   };
 
@@ -402,6 +499,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       }
       if (!target.closest('.church-dropdown-container')) {
         setShowChurchDropdown(false);
+      }
+      if (!target.closest('.location-dropdown-container')) {
+        setShowLocationDropdown(false);
       }
     };
 
@@ -618,18 +718,59 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="relative location-dropdown-container space-y-2">
                 <label htmlFor="location" className="block text-sm font-semibold text-gray-800">
                   Location
                 </label>
-                <input
-                  type="text"
-                  id="location"
-                  value={selectedChurch?.address || ''}
-                  readOnly
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-600 transition-all duration-200"
-                  placeholder="Location will be filled based on church selection"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="location"
+                    value={locationSearch}
+                    onChange={(e) => handleLocationSearchChange(e.target.value)}
+                    onFocus={() => setShowLocationDropdown(true)}
+                    disabled={!selectedChurch || isLoadingLocations}
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-500"
+                    placeholder={
+                      !selectedChurch 
+                        ? "Select a church first" 
+                        : isLoadingLocations 
+                        ? "Loading locations..." 
+                        : "Search and select location"
+                    }
+                  />
+                  {isLoadingLocations ? (
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  )}
+                  
+                  {showLocationDropdown && selectedChurch && !isLoadingLocations && (
+                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                      {filteredLocations.length > 0 ? (
+                        filteredLocations.map((location) => (
+                          <button
+                            key={location.id}
+                            type="button"
+                            onClick={() => handleLocationSelect(location)}
+                            className="w-full px-4 py-3 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors duration-150"
+                          >
+                            <div className="font-medium text-gray-900">{location.name}</div>
+                            {location.address && (
+                              <div className="text-sm text-gray-500 mt-1">{location.address}</div>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-gray-500 text-center">
+                          {locationSearch ? 'No locations found' : 'No locations available for this church'}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -716,6 +857,7 @@ export function Events() {
   const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
   const [isLoadingChurches, setIsLoadingChurches] = useState(false);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -725,7 +867,8 @@ export function Events() {
     day: i % 7,
     time: (Math.floor(Math.random() * 17) + 6) * 60 + Math.floor(Math.random() * 4) * 15, // Between 6:00 AM and 10:00 PM
     duration: [60, 90, 120][i % 3],
-    churchLocationId: `loc-${i + 1}`,
+    church_id: `church-${Math.floor(i / 3) + 1}`,
+    location_id: `location-${i + 1}`,
     eventFrequencyId: `freq-${i + 1}`,
     additionalText: i % 3 === 0 ? 'Special notes for this event' : '',
     churchName: `Church ${Math.floor(i / 3) + 1}`,
@@ -840,19 +983,53 @@ export function Events() {
   const handleAddEvent = async (eventData: Omit<Event, 'id'>) => {
     try {
       setIsSubmitting(true);
-      // TODO: Replace with actual API call
-      // await axios.post(`${ADMIN_BASE_URL}/events`, eventData);
+      setError(null);
       
-      // For now, add to local state with a new ID
-      const newEvent: Event = {
-        ...eventData,
-        id: `${Date.now()}`
-      };
-      setEvents([...events, newEvent]);
-      setShowAddModal(false);
-    } catch (err) {
+      // Create FormData object for form-data request
+      const formData = new FormData();
+      formData.append('name', eventData.name);
+      formData.append('type_id', eventData.eventType); // This should be the event type ID
+      formData.append('date', new Date().toISOString().split('T')[0]); // Convert from day to date
+      formData.append('time', `${Math.floor(eventData.time / 60).toString().padStart(2, '0')}:${(eventData.time % 60).toString().padStart(2, '0')}`);
+      formData.append('duration', eventData.duration.toString());
+      formData.append('location_id', eventData.location_id);
+      formData.append('frequency_id', eventData.eventFrequencyId);
+      formData.append('notes', eventData.additionalText);
+      
+      const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+      
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        // For now, add to local state with a new ID (replace with actual API response)
+        const newEvent: Event = {
+          ...eventData,
+          id: `${Date.now()}`
+        };
+        setEvents([...events, newEvent]);
+        setShowAddModal(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to create event');
+      }
+    } catch (err: any) {
       console.error('Error adding event:', err);
-      throw err;
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create event. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -862,19 +1039,53 @@ export function Events() {
     if (editingEvent) {
       try {
         setIsSubmitting(true);
-        // TODO: Replace with actual API call
-        // await axios.put(`${ADMIN_BASE_URL}/events/${editingEvent.id}`, eventData);
+        setError(null);
         
-        // For now, update local state
-        setEvents(events.map(event => 
-          event.id === editingEvent.id 
-            ? { ...event, ...eventData }
-            : event
-        ));
-        setEditingEvent(null);
-      } catch (err) {
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', editingEvent.id);
+        if (eventData.name) formData.append('name', eventData.name);
+        if (eventData.eventType) formData.append('type_id', eventData.eventType);
+        if (eventData.time !== undefined) {
+          formData.append('time', `${Math.floor(eventData.time / 60).toString().padStart(2, '0')}:${(eventData.time % 60).toString().padStart(2, '0')}`);
+        }
+        if (eventData.duration !== undefined) formData.append('duration', eventData.duration.toString());
+        if (eventData.additionalText !== undefined) formData.append('notes', eventData.additionalText);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/events/edit`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json'
+          }
+        });
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          // For now, update local state (replace with actual API response)
+          setEvents(events.map(event => 
+            event.id === editingEvent.id 
+              ? { ...event, ...eventData }
+              : event
+          ));
+          setEditingEvent(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to update event');
+        }
+      } catch (err: any) {
         console.error('Error updating event:', err);
-        throw err;
+        
+        // Extract error message from response
+        let errorMessage = 'Failed to update event. Please try again.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setIsSubmitting(false);
       }
@@ -885,14 +1096,41 @@ export function Events() {
     if (selectedEvent) {
       try {
         setIsDeleting(true);
-        // TODO: Replace with actual API call
-        // await axios.delete(`${ADMIN_BASE_URL}/events/${selectedEvent.id}`);
+        setError(null);
         
-        // For now, remove from local state
-        setEvents(events.filter(event => event.id !== selectedEvent.id));
-        setSelectedEvent(null);
-      } catch (err) {
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', selectedEvent.id);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/events/delete`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json'
+          }
+        });
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          // For now, remove from local state (replace with actual API response)
+          setEvents(events.filter(event => event.id !== selectedEvent.id));
+          setSelectedEvent(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to delete event');
+        }
+      } catch (err: any) {
         console.error('Error deleting event:', err);
+        
+        // Extract error message from response
+        let errorMessage = 'Failed to delete event. Please try again.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setIsDeleting(false);
       }
@@ -923,6 +1161,12 @@ export function Events() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
