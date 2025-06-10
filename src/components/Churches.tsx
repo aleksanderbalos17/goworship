@@ -88,6 +88,7 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
   const [name, setName] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
   const [address, setAddress] = useState('');
   const [latitude, setLatitude] = useState<string>('');
   const [longitude, setLongitude] = useState<string>('');
@@ -96,6 +97,7 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
   const [denominationSearch, setDenominationSearch] = useState('');
   const [showDenominationDropdown, setShowDenominationDropdown] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   // Filter denominations based on search term
@@ -117,58 +119,74 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
     }
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select a valid image file');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image file size must be less than 5MB');
-        return;
-      }
+    if (!file) return;
 
-      setPhotoFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-      setError('');
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file');
+      return;
     }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image file size must be less than 5MB');
+      return;
+    }
+
+    setPhotoFile(file);
+    setUploadError(null);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPhotoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Auto-upload the image
+    await uploadPhoto(file);
   };
 
-  const removePhoto = () => {
-    setPhotoFile(null);
-    setPhotoPreview(null);
-  };
-
-  const uploadPhoto = async (file: File): Promise<string> => {
+  const uploadPhoto = async (file: File) => {
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('image', file);
 
     try {
       setIsUploadingPhoto(true);
-      const response = await axios.post(`${ADMIN_BASE_URL}/upload/church-photo`, formData, {
+      setUploadError(null);
+      
+      const response = await axios.post(`${ADMIN_BASE_URL}/upload/church-image`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
       
-      return response.data.data.photo_url;
-    } catch (err) {
+      if (response.data.status === 'success' && response.data.data?.url) {
+        setUploadedPhotoUrl(response.data.data.url);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (err: any) {
       console.error('Error uploading photo:', err);
-      throw new Error('Failed to upload photo');
+      setUploadError(
+        err.response?.data?.message || 
+        err.message || 
+        'Failed to upload photo. Please try again.'
+      );
+      setUploadedPhotoUrl(null);
     } finally {
       setIsUploadingPhoto(false);
     }
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setUploadedPhotoUrl(null);
+    setUploadError(null);
   };
 
   const handleLocationSelect = (lat: string, lng: string) => {
@@ -191,16 +209,9 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
     }
 
     try {
-      let photoUrl = null;
-      
-      // Upload photo if selected
-      if (photoFile) {
-        photoUrl = await uploadPhoto(photoFile);
-      }
-
       const churchData = {
         name: name.trim(),
-        photo_url: photoUrl,
+        photo_url: uploadedPhotoUrl,
         address: address.trim() || null,
         latitude: latitude || null,
         longitude: longitude || null,
@@ -273,18 +284,42 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
                       onChange={handlePhotoChange}
                       className="hidden"
                       id="photo-upload"
+                      disabled={isUploadingPhoto}
                     />
-                    <label htmlFor="photo-upload" className="cursor-pointer">
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium text-indigo-600 hover:text-indigo-500">
-                          Click to upload
-                        </span>{' '}
-                        or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    <label htmlFor="photo-upload" className={`cursor-pointer ${isUploadingPhoto ? 'pointer-events-none' : ''}`}>
+                      {isUploadingPhoto ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+                          <p className="text-sm text-gray-600">Uploading...</p>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-600">
+                            <span className="font-medium text-indigo-600 hover:text-indigo-500">
+                              Click to upload
+                            </span>{' '}
+                            or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                        </>
+                      )}
                     </label>
                   </div>
+                  
+                  {/* Upload Status */}
+                  {uploadError && (
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                      {uploadError}
+                    </div>
+                  )}
+                  
+                  {uploadedPhotoUrl && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <p className="text-sm text-green-700 font-medium mb-1">✓ Photo uploaded successfully</p>
+                      <p className="text-xs text-gray-500 break-all">{uploadedPhotoUrl}</p>
+                    </div>
+                  )}
                 </div>
                 
                 {photoPreview && (
@@ -449,7 +484,7 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
                 disabled={isSubmitting || isUploadingPhoto}
                 className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
               >
-                {isSubmitting ? 'Creating...' : isUploadingPhoto ? 'Uploading...' : 'Create Church'}
+                {isSubmitting ? 'Creating...' : 'Create Church'}
               </button>
             </div>
           </form>
