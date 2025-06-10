@@ -919,7 +919,7 @@ export function Events() {
     fetchChurches();
   }, []);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 30;
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     event.eventType.toLowerCase().includes(searchTerm.toLowerCase()) ||
