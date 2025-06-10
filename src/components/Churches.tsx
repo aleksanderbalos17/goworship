@@ -95,20 +95,29 @@ function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProp
 }
 
 function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: AddChurchModalProps) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState('Sample Church Test');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
-  const [address, setAddress] = useState('');
-  const [latitude, setLatitude] = useState<string>('');
-  const [longitude, setLongitude] = useState<string>('');
-  const [speakers, setSpeakers] = useState('');
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>('https://admin.goworship.co.uk/church_images/1749530592_dd9274077389342cf3b2.jpg');
+  const [address, setAddress] = useState('123 Church Street, City, Country');
+  const [latitude, setLatitude] = useState<string>('51.5074');
+  const [longitude, setLongitude] = useState<string>('-0.1278');
+  const [speakers, setSpeakers] = useState('John Doe, Jane Smith');
   const [selectedDenomination, setSelectedDenomination] = useState<Denomination | null>(null);
   const [denominationSearch, setDenominationSearch] = useState('');
   const [showDenominationDropdown, setShowDenominationDropdown] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Set default denomination if available
+  useEffect(() => {
+    if (denominations.length > 0 && !selectedDenomination) {
+      const firstDenomination = denominations[0];
+      setSelectedDenomination(firstDenomination);
+      setDenominationSearch(firstDenomination.name);
+    }
+  }, [denominations, selectedDenomination]);
 
   // Filter denominations based on search term
   const filteredDenominations = denominations.filter(denomination => 
@@ -229,10 +238,12 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
         denomination_id: parseInt(selectedDenomination.id)
       };
 
+      console.log('Submitting church data:', churchData);
       await onConfirm(churchData);
       onClose();
-    } catch (err) {
-      setError('Failed to create church. Please try again.');
+    } catch (err: any) {
+      console.error('Submit error:', err);
+      setError(err.message || 'Failed to create church. Please try again.');
     }
   };
 
@@ -332,10 +343,10 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
                   )}
                 </div>
                 
-                {photoPreview && (
+                {(photoPreview || uploadedPhotoUrl) && (
                   <div className="relative">
                     <img
-                      src={photoPreview}
+                      src={photoPreview || uploadedPhotoUrl || ''}
                       alt="Preview"
                       className="w-32 h-32 object-cover rounded-lg border border-gray-300"
                     />
@@ -569,8 +580,12 @@ export function Churches() {
   const handleAddChurch = async (churchData: ChurchFormData) => {
     try {
       setIsSubmitting(true);
+      setError(null);
       
-      // Make API call to save the church
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/churches/create`);
+      console.log('Request data:', churchData);
+      
+      // Make API call to save the church using the correct endpoint
       const response = await axios.post(`${ADMIN_BASE_URL}/churches/create`, churchData, {
         headers: {
           'Content-Type': 'application/json',
@@ -578,16 +593,19 @@ export function Churches() {
         }
       });
 
+      console.log('API Response:', response);
+
       // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
         // Refresh the churches list to show the new church
         await fetchChurches(currentPage);
         setShowAddModal(false);
       } else {
-        throw new Error('Failed to create church');
+        throw new Error(response.data.message || 'Failed to create church');
       }
     } catch (err: any) {
       console.error('Error adding church:', err);
+      console.error('Error response:', err.response);
       
       // Extract error message from response
       let errorMessage = 'Failed to create church. Please try again.';
