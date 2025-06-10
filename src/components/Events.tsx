@@ -18,6 +18,17 @@ interface Event {
   locationAddress: string;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  address: string;
+  latitude: string | null;
+  longitude: string | null;
+  church_id: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
 interface EventFrequency {
   id: string;
   name: string;
@@ -39,17 +50,6 @@ interface Church {
   updated_at: string;
   speakers: string | null;
   denomination_id: string;
-}
-
-interface Location {
-  id: string;
-  church_id: string;
-  name: string;
-  address: string;
-  latitude: string | null;
-  longitude: string | null;
-  created_at: string;
-  updated_at: string | null;
 }
 
 interface EventType {
@@ -306,23 +306,15 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     try {
       setIsLoadingLocations(true);
       const response = await axios.get(`${ADMIN_BASE_URL}/church-locations/all`, {
-        params: {
-          church_id: churchId
-        },
-        headers: {
-          'Accept': 'application/json'
-        }
+        params: { church_id: churchId },
+        headers: { 'Accept': 'application/json' }
       });
       
-      // Handle different possible response structures
       let locationsData: Location[] = [];
       if (response.data.status === 'success' && response.data.data) {
         locationsData = response.data.data.locations || response.data.data;
       } else if (Array.isArray(response.data)) {
         locationsData = response.data;
-      } else {
-        console.warn('Unexpected response structure:', response.data);
-        locationsData = [];
       }
       
       setLocations(locationsData);
@@ -456,9 +448,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     // Reset location selection and fetch new locations
     setSelectedLocation(null);
     setLocationSearch('');
-    setLocations([]);
-    
-    // Fetch locations for this church
     fetchLocations(church.id);
   };
 
@@ -511,72 +500,68 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden shadow-2xl">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-2xl font-bold">Add New Event</h3>
-              <p className="text-indigo-100 mt-1">Create a new church event</p>
-            </div>
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-2xl font-semibold text-gray-900">Add New Event</h3>
             <button
               onClick={onClose}
-              className="text-white hover:text-indigo-200 transition-colors p-2 hover:bg-white/10 rounded-lg"
+              className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
-        </div>
-        
-        {/* Content */}
-        <div className="p-8 overflow-y-auto max-h-[calc(95vh-120px)]">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          
+          <form onSubmit={handleSubmit}>
             {/* Event Name */}
-            <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-semibold text-gray-800">
-                Event Name
+            <div className="mb-6">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Event Name *
               </label>
               <input
                 type="text"
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter event name"
+                required
               />
             </div>
 
-            {/* Date, Time, Duration Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label htmlFor="date" className="block text-sm font-semibold text-gray-800">
-                  Date
+            {/* Date / Time / Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date *
                 </label>
                 <input
                   type="date"
                   id="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="time" className="block text-sm font-semibold text-gray-800">
-                  Time
+              <div>
+                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
+                  Time *
                 </label>
                 <input
                   type="time"
                   id="time"
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="duration" className="block text-sm font-semibold text-gray-800">
-                  Duration (minutes)
+              <div>
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
+                  Duration (minutes) *
                 </label>
                 <input
                   type="number"
@@ -585,16 +570,17 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   onChange={(e) => setDuration(parseInt(e.target.value))}
                   min="15"
                   step="15"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
                 />
               </div>
             </div>
 
-            {/* Event Type and Event Frequency Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative event-type-dropdown-container space-y-2">
-                <label htmlFor="eventType" className="block text-sm font-semibold text-gray-800">
-                  Event Type
+            {/* Event Type / Event Frequency */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="relative event-type-dropdown-container">
+                <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">
+                  Event Type *
                 </label>
                 <div className="relative">
                   <input
@@ -603,37 +589,40 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     value={eventTypeSearch}
                     onChange={(e) => handleEventTypeSearchChange(e.target.value)}
                     onFocus={() => setShowEventTypeDropdown(true)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Search and select event type"
+                    required
                   />
-                  <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
                   {showEventTypeDropdown && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {filteredEventTypes.length > 0 ? (
-                        filteredEventTypes.map((eventType) => (
-                          <button
-                            key={eventType.id}
-                            type="button"
-                            onClick={() => handleEventTypeSelect(eventType)}
-                            className="w-full px-4 py-3 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                          >
-                            <div className="font-medium text-gray-900">{eventType.name}</div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {eventTypeSearch ? 'No event types found' : 'Start typing to search event types'}
-                        </div>
-                      )}
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredEventTypes.length > 0 ? (
+                          filteredEventTypes.map((eventType) => (
+                            <button
+                              key={eventType.id}
+                              type="button"
+                              onClick={() => handleEventTypeSelect(eventType)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{eventType.name}</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {eventTypeSearch ? 'No event types found' : 'Start typing to search event types'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="relative frequency-dropdown-container space-y-2">
-                <label htmlFor="frequency" className="block text-sm font-semibold text-gray-800">
-                  Event Frequency
+              <div className="relative frequency-dropdown-container">
+                <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
+                  Event Frequency *
                 </label>
                 <div className="relative">
                   <input
@@ -642,43 +631,46 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     value={frequencySearch}
                     onChange={(e) => handleFrequencySearchChange(e.target.value)}
                     onFocus={() => setShowFrequencyDropdown(true)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Search and select frequency"
+                    required
                   />
-                  <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
                   {showFrequencyDropdown && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {filteredFrequencies.length > 0 ? (
-                        filteredFrequencies.map((frequency) => (
-                          <button
-                            key={frequency.id}
-                            type="button"
-                            onClick={() => handleFrequencySelect(frequency)}
-                            className="w-full px-4 py-3 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                          >
-                            <div className="font-medium text-gray-900">{frequency.name}</div>
-                            {frequency.notes && (
-                              <div className="text-sm text-gray-500 mt-1">{frequency.notes}</div>
-                            )}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {frequencySearch ? 'No frequencies found' : 'Start typing to search frequencies'}
-                        </div>
-                      )}
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredFrequencies.length > 0 ? (
+                          filteredFrequencies.map((frequency) => (
+                            <button
+                              key={frequency.id}
+                              type="button"
+                              onClick={() => handleFrequencySelect(frequency)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{frequency.name}</div>
+                              {frequency.notes && (
+                                <div className="text-sm text-gray-500 mt-1">{frequency.notes}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {frequencySearch ? 'No frequencies found' : 'Start typing to search frequencies'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Church and Location Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative church-dropdown-container space-y-2">
-                <label htmlFor="church" className="block text-sm font-semibold text-gray-800">
-                  Church
+            {/* Church / Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="relative church-dropdown-container">
+                <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
+                  Church *
                 </label>
                 <div className="relative">
                   <input
@@ -687,40 +679,43 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     value={churchSearch}
                     onChange={(e) => handleChurchSearchChange(e.target.value)}
                     onFocus={() => setShowChurchDropdown(true)}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     placeholder="Search and select a church"
+                    required
                   />
-                  <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
                   {showChurchDropdown && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {filteredChurches.length > 0 ? (
-                        filteredChurches.map((church) => (
-                          <button
-                            key={church.id}
-                            type="button"
-                            onClick={() => handleChurchSelect(church)}
-                            className="w-full px-4 py-3 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                          >
-                            <div className="font-medium text-gray-900">{church.name}</div>
-                            {church.address && (
-                              <div className="text-sm text-gray-500 mt-1">{church.address}</div>
-                            )}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {churchSearch ? 'No churches found' : 'Start typing to search churches'}
-                        </div>
-                      )}
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredChurches.length > 0 ? (
+                          filteredChurches.map((church) => (
+                            <button
+                              key={church.id}
+                              type="button"
+                              onClick={() => handleChurchSelect(church)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{church.name}</div>
+                              {church.address && (
+                                <div className="text-sm text-gray-500 mt-1">{church.address}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {churchSearch ? 'No churches found' : 'Start typing to search churches'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="relative location-dropdown-container space-y-2">
-                <label htmlFor="location" className="block text-sm font-semibold text-gray-800">
-                  Location
+              <div className="relative location-dropdown-container">
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                  Location *
                 </label>
                 <div className="relative">
                   <input
@@ -730,7 +725,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     onChange={(e) => handleLocationSearchChange(e.target.value)}
                     onFocus={() => setShowLocationDropdown(true)}
                     disabled={!selectedChurch || isLoadingLocations}
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 disabled:bg-gray-50 disabled:text-gray-500"
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
                     placeholder={
                       !selectedChurch 
                         ? "Select a church first" 
@@ -738,36 +733,39 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                         ? "Loading locations..." 
                         : "Search and select location"
                     }
+                    required
                   />
                   {isLoadingLocations ? (
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
                     </div>
                   ) : (
-                    <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   )}
                   
                   {showLocationDropdown && selectedChurch && !isLoadingLocations && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-                      {filteredLocations.length > 0 ? (
-                        filteredLocations.map((location) => (
-                          <button
-                            key={location.id}
-                            type="button"
-                            onClick={() => handleLocationSelect(location)}
-                            className="w-full px-4 py-3 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                          >
-                            <div className="font-medium text-gray-900">{location.name}</div>
-                            {location.address && (
-                              <div className="text-sm text-gray-500 mt-1">{location.address}</div>
-                            )}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-gray-500 text-center">
-                          {locationSearch ? 'No locations found' : 'No locations available for this church'}
-                        </div>
-                      )}
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredLocations.length > 0 ? (
+                          filteredLocations.map((location) => (
+                            <button
+                              key={location.id}
+                              type="button"
+                              onClick={() => handleLocationSelect(location)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{location.name}</div>
+                              {location.address && (
+                                <div className="text-sm text-gray-500 mt-1">{location.address}</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {locationSearch ? 'No locations found' : 'No locations available for this church'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -775,8 +773,8 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
             </div>
 
             {/* Notes */}
-            <div className="space-y-2">
-              <label htmlFor="additionalText" className="block text-sm font-semibold text-gray-800">
+            <div className="mb-6">
+              <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-2">
                 Notes
               </label>
               <textarea
@@ -784,46 +782,35 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 value={additionalText}
                 onChange={(e) => setAdditionalText(e.target.value)}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter additional notes, special instructions, or event description"
               />
             </div>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-600 font-medium">{error}</p>
+              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
-          </form>
-        </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-6 border-t border-gray-200">
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 font-medium transition-colors duration-200 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Creating...</span>
-                </div>
-              ) : (
-                'Create Event'
-              )}
-            </button>
-          </div>
+            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
+              >
+                {isSubmitting ? 'Creating...' : 'Create Event'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -857,7 +844,6 @@ export function Events() {
   const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
   const [isLoadingChurches, setIsLoadingChurches] = useState(false);
   const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   // Mock data - replace with actual API call
   const mockEvents: Event[] = Array.from({ length: 50 }, (_, i) => ({
@@ -867,8 +853,8 @@ export function Events() {
     day: i % 7,
     time: (Math.floor(Math.random() * 17) + 6) * 60 + Math.floor(Math.random() * 4) * 15, // Between 6:00 AM and 10:00 PM
     duration: [60, 90, 120][i % 3],
-    church_id: `church-${Math.floor(i / 3) + 1}`,
-    location_id: `location-${i + 1}`,
+    church_id: `church-${i + 1}`,
+    location_id: `loc-${i + 1}`,
     eventFrequencyId: `freq-${i + 1}`,
     additionalText: i % 3 === 0 ? 'Special notes for this event' : '',
     churchName: `Church ${Math.floor(i / 3) + 1}`,
@@ -983,13 +969,12 @@ export function Events() {
   const handleAddEvent = async (eventData: Omit<Event, 'id'>) => {
     try {
       setIsSubmitting(true);
-      setError(null);
       
       // Create FormData object for form-data request
       const formData = new FormData();
       formData.append('name', eventData.name);
-      formData.append('type_id', eventData.eventType); // This should be the event type ID
-      formData.append('date', new Date().toISOString().split('T')[0]); // Convert from day to date
+      formData.append('type_id', eventData.eventType); // This should be the type ID
+      formData.append('date', new Date().toISOString().split('T')[0]); // Use the selected date
       formData.append('time', `${Math.floor(eventData.time / 60).toString().padStart(2, '0')}:${(eventData.time % 60).toString().padStart(2, '0')}`);
       formData.append('duration', eventData.duration.toString());
       formData.append('location_id', eventData.location_id);
@@ -1005,7 +990,7 @@ export function Events() {
       
       // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-        // For now, add to local state with a new ID (replace with actual API response)
+        // For now, add to local state with a new ID
         const newEvent: Event = {
           ...eventData,
           id: `${Date.now()}`
@@ -1017,19 +1002,7 @@ export function Events() {
       }
     } catch (err: any) {
       console.error('Error adding event:', err);
-      
-      // Extract error message from response
-      let errorMessage = 'Failed to create event. Please try again.';
-      if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.response?.data?.error) {
-        errorMessage = err.response.data.error;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      throw new Error(err.response?.data?.message || err.message || 'Failed to create event');
     } finally {
       setIsSubmitting(false);
     }
@@ -1039,7 +1012,6 @@ export function Events() {
     if (editingEvent) {
       try {
         setIsSubmitting(true);
-        setError(null);
         
         // Create FormData object for form-data request
         const formData = new FormData();
@@ -1061,7 +1033,7 @@ export function Events() {
         
         // Check if the response indicates success
         if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-          // For now, update local state (replace with actual API response)
+          // For now, update local state
           setEvents(events.map(event => 
             event.id === editingEvent.id 
               ? { ...event, ...eventData }
@@ -1073,19 +1045,7 @@ export function Events() {
         }
       } catch (err: any) {
         console.error('Error updating event:', err);
-        
-        // Extract error message from response
-        let errorMessage = 'Failed to update event. Please try again.';
-        if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response?.data?.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        
-        setError(errorMessage);
-        throw new Error(errorMessage);
+        throw new Error(err.response?.data?.message || err.message || 'Failed to update event');
       } finally {
         setIsSubmitting(false);
       }
@@ -1096,7 +1056,6 @@ export function Events() {
     if (selectedEvent) {
       try {
         setIsDeleting(true);
-        setError(null);
         
         // Create FormData object for form-data request
         const formData = new FormData();
@@ -1111,7 +1070,7 @@ export function Events() {
         
         // Check if the response indicates success
         if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-          // For now, remove from local state (replace with actual API response)
+          // For now, remove from local state
           setEvents(events.filter(event => event.id !== selectedEvent.id));
           setSelectedEvent(null);
         } else {
@@ -1119,18 +1078,6 @@ export function Events() {
         }
       } catch (err: any) {
         console.error('Error deleting event:', err);
-        
-        // Extract error message from response
-        let errorMessage = 'Failed to delete event. Please try again.';
-        if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.response?.data?.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        
-        setError(errorMessage);
       } finally {
         setIsDeleting(false);
       }
@@ -1140,7 +1087,7 @@ export function Events() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">All Events</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Events</h1>
         <div className="flex items-center space-x-4">
           <div className="relative">
             <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1161,12 +1108,6 @@ export function Events() {
           </button>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-600 font-medium">{error}</p>
-        </div>
-      )}
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
