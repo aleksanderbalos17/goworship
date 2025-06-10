@@ -27,12 +27,10 @@ interface ApiResponse {
 
 export function Dashboard({ onLogout }: DashboardProps) {
   const [currentPage, setCurrentPage] = useState<
-    'dashboard' | 'events' | 'users' | 'books' | 'bibles' | 'churches' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
+    'dashboard' | 'events' | 'churches' | 'users' | 'books' | 'bibles' | 'denominations' | 'event-types' | 'event-frequencies' | 'settings'
   >('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [eventsMenuOpen, setEventsMenuOpen] = useState(false);
-  const [booksMenuOpen, setBooksMenuOpen] = useState(false);
-  const [churchesMenuOpen, setChurchesMenuOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,14 +70,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
     switch (currentPage) {
       case 'events':
         return <Events />;
+      case 'churches':
+        return <Churches />;
       case 'users':
         return <UsersPage />;
       case 'books':
         return <Books />;
       case 'bibles':
         return <Bibles />;
-      case 'churches':
-        return <Churches />;
       case 'denominations':
         return <Denominations />;
       case 'event-types':
@@ -176,7 +174,20 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 }`}
               >
                 <CalendarDays className="w-5 h-5" />
-                <span>All Events</span>
+                <span>Events</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setCurrentPage('churches')}
+                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
+                  currentPage === 'churches'
+                    ? 'text-indigo-600 bg-indigo-50'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Church className="w-5 h-5" />
+                <span>Churches</span>
               </button>
             </li>
             <li>
@@ -194,20 +205,20 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </li>
             <li className="relative">
               <button
-                onClick={() => setEventsMenuOpen(!eventsMenuOpen)}
+                onClick={() => setSettingsMenuOpen(!settingsMenuOpen)}
                 className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'event-types' || currentPage === 'event-frequencies'
+                  currentPage === 'event-types' || currentPage === 'event-frequencies' || currentPage === 'denominations' || currentPage === 'books' || currentPage === 'bibles'
                     ? 'text-indigo-600 bg-indigo-50'
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5" />
-                  <span>Events</span>
+                  <Settings className="w-5 h-5" />
+                  <span>Settings</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${eventsMenuOpen ? 'transform rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform ${settingsMenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
-              {eventsMenuOpen && (
+              {settingsMenuOpen && (
                 <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
@@ -233,38 +244,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                       Event Frequencies
                     </button>
                   </li>
-                </ul>
-              )}
-            </li>
-            <li className="relative">
-              <button
-                onClick={() => setChurchesMenuOpen(!churchesMenuOpen)}
-                className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'churches' || currentPage === 'denominations'
-                    ? 'text-indigo-600 bg-indigo-50'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Church className="w-5 h-5" />
-                  <span>Churches</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${churchesMenuOpen ? 'transform rotate-180' : ''}`} />
-              </button>
-              {churchesMenuOpen && (
-                <ul className="pl-12 mt-2 space-y-2">
-                  <li>
-                    <button
-                      onClick={() => setCurrentPage('churches')}
-                      className={`w-full text-left py-2 text-sm ${
-                        currentPage === 'churches'
-                          ? 'text-indigo-600'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      Churches
-                    </button>
-                  </li>
                   <li>
                     <button
                       onClick={() => setCurrentPage('denominations')}
@@ -277,26 +256,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                       Denominations
                     </button>
                   </li>
-                </ul>
-              )}
-            </li>
-            <li className="relative">
-              <button
-                onClick={() => setBooksMenuOpen(!booksMenuOpen)}
-                className={`flex items-center justify-between w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'books' || currentPage === 'bibles'
-                    ? 'text-indigo-600 bg-indigo-50'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Book className="w-5 h-5" />
-                  <span>Books</span>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${booksMenuOpen ? 'transform rotate-180' : ''}`} />
-              </button>
-              {booksMenuOpen && (
-                <ul className="pl-12 mt-2 space-y-2">
                   <li>
                     <button
                       onClick={() => setCurrentPage('books')}
@@ -323,19 +282,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   </li>
                 </ul>
               )}
-            </li>
-            <li>
-              <button
-                onClick={() => setCurrentPage('settings')}
-                className={`flex items-center space-x-3 w-full text-left px-4 py-2 rounded-lg ${
-                  currentPage === 'settings'
-                    ? 'text-indigo-600 bg-indigo-50'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <Settings className="w-5 h-5" />
-                <span>Settings</span>
-              </button>
             </li>
           </ul>
         </nav>
