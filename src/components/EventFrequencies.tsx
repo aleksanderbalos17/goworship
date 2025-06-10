@@ -333,7 +333,6 @@ export function EventFrequencies() {
       setPagination(response.data.data.pagination);
     } catch (err) {
       setError('Failed to fetch event frequencies. Please try again later.');
-      console.error('Error fetching event frequencies:', err);
     } finally {
       setIsLoading(false);
     }
@@ -351,22 +350,12 @@ export function EventFrequencies() {
       formData.append('active', active.toString());
       formData.append('showme', showme.toString());
       
-      console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/create`);
-      console.log('Form data:', {
-        name: name.trim(),
-        notes: notes.trim(),
-        active: active.toString(),
-        showme: showme.toString()
-      });
-      
       const response = await axios.post(`${ADMIN_BASE_URL}/event-frequencies/create`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
-      
-      console.log('API Response:', response);
       
       // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
@@ -376,9 +365,6 @@ export function EventFrequencies() {
         throw new Error(response.data.message || 'Failed to create event frequency');
       }
     } catch (err: any) {
-      console.error('Error creating event frequency:', err);
-      console.error('Error response:', err.response);
-      
       // Extract error message from response
       let errorMessage = 'Failed to create event frequency. Please try again.';
       if (err.response?.data?.message) {
@@ -410,15 +396,6 @@ export function EventFrequencies() {
         formData.append('active', active.toString());
         formData.append('showme', showme.toString());
         
-        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/edit`);
-        console.log('Form data:', {
-          id: editingEventFrequency.id,
-          name: name.trim(),
-          notes: notes.trim(),
-          active: active.toString(),
-          showme: showme.toString()
-        });
-        
         const response = await axios.post(
           `${ADMIN_BASE_URL}/event-frequencies/edit`,
           formData,
@@ -430,8 +407,6 @@ export function EventFrequencies() {
           }
         );
         
-        console.log('API Response:', response);
-        
         // Check if the response indicates success
         if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
           await fetchEventFrequencies(currentPage);
@@ -440,9 +415,6 @@ export function EventFrequencies() {
           throw new Error(response.data.message || 'Failed to update event frequency');
         }
       } catch (err: any) {
-        console.error('Error updating event frequency:', err);
-        console.error('Error response:', err.response);
-        
         // Extract error message from response
         let errorMessage = 'Failed to update event frequency. Please try again.';
         if (err.response?.data?.message) {
@@ -465,16 +437,38 @@ export function EventFrequencies() {
     if (selectedEventFrequency) {
       try {
         setIsDeleting(true);
-        await axios.delete(`${ADMIN_BASE_URL}/event-frequencies/${selectedEventFrequency.id}`, {
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', selectedEventFrequency.id);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/event-frequencies/delete`, formData, {
           headers: {
+            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json'
           }
         });
-        await fetchEventFrequencies(currentPage);
-        setSelectedEventFrequency(null);
-      } catch (err) {
-        console.error('Error deleting event frequency:', err);
-        setError('Failed to delete event frequency. Please try again later.');
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchEventFrequencies(currentPage);
+          setSelectedEventFrequency(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to delete event frequency');
+        }
+      } catch (err: any) {
+        // Extract error message from response
+        let errorMessage = 'Failed to delete event frequency. Please try again later.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setIsDeleting(false);
       }
@@ -490,7 +484,6 @@ export function EventFrequencies() {
       });
       await fetchEventFrequencies(currentPage);
     } catch (err) {
-      console.error('Error toggling active status:', err);
       setError('Failed to update status. Please try again later.');
     }
   };
@@ -504,7 +497,6 @@ export function EventFrequencies() {
       });
       await fetchEventFrequencies(currentPage);
     } catch (err) {
-      console.error('Error toggling showme status:', err);
       setError('Failed to update status. Please try again later.');
     }
   };
