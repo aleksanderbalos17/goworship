@@ -571,7 +571,7 @@ export function Churches() {
       setIsSubmitting(true);
       
       // Make API call to save the church
-      const response = await axios.post(`${ADMIN_BASE_URL}/churches`, churchData, {
+      const response = await axios.post(`${ADMIN_BASE_URL}/churches/create`, churchData, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
