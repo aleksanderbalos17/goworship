@@ -534,14 +534,17 @@ export function EventFrequencies() {
       </div>
 
       {/* Mobile Card View */}
-      <div className="block lg:hidden space-y-4">
+      <div className="block xl:hidden space-y-4">
         {filteredEventFrequencies.map((frequency) => (
           <div key={frequency.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-medium text-gray-900 truncate">{frequency.name}</h3>
                 {frequency.notes && (
-                  <p className="text-sm text-gray-500 mt-1 break-words">{frequency.notes}</p>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600 font-medium mb-1">Notes:</p>
+                    <p className="text-sm text-gray-500 break-words leading-relaxed">{frequency.notes}</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -597,28 +600,30 @@ export function EventFrequencies() {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden lg:block bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="hidden xl:block bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Show Me</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5">Notes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Active</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Show Me</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredEventFrequencies.map((frequency) => (
                 <tr key={frequency.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap w-1/6">
                     <div className="text-sm font-medium text-gray-900">{frequency.name}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500">{frequency.notes}</div>
+                  <td className="px-6 py-4 w-2/5">
+                    <div className="text-sm text-gray-500 break-words max-w-xs xl:max-w-sm 2xl:max-w-md leading-relaxed">
+                      {frequency.notes}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap w-1/12">
                     <button
                       onClick={() => toggleActive(frequency.id)}
                       className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -630,7 +635,7 @@ export function EventFrequencies() {
                       {frequency.active === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap w-1/12">
                     <button
                       onClick={() => toggleShowme(frequency.id)}
                       className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -642,7 +647,7 @@ export function EventFrequencies() {
                       {frequency.showme === "1" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm w-1/6">
                     <div className="flex space-x-2">
                       <button
                         onClick={() => setEditingEventFrequency(frequency)}
@@ -732,7 +737,7 @@ export function EventFrequencies() {
 
       {/* Mobile Pagination */}
       {pagination && (
-        <div className="block lg:hidden mt-6">
+        <div className="block xl:hidden mt-6">
           <div className="flex justify-between items-center">
             <button
               onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
