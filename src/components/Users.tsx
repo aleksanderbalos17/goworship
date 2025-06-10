@@ -151,7 +151,6 @@ export function Users() {
       setPagination(response.data.data.pagination);
     } catch (err) {
       setError('Failed to fetch users. Please try again later.');
-      console.error('Error fetching users:', err);
     } finally {
       setIsLoading(false);
     }
@@ -168,20 +167,42 @@ export function Users() {
   const handleStatusConfirm = async () => {
     if (selectedUser) {
       try {
-        await axios.put(`${ADMIN_BASE_URL}/users/${selectedUser.id}/toggle-login`, null, {
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', selectedUser.id);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/users/toggle-login`, formData, {
           headers: {
+            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json'
           }
         });
-        setUsers(users.map(user => 
-          user.id === selectedUser.id
-            ? { ...user, login_enabled: user.login_enabled === "1" ? "0" : "1" }
-            : user
-        ));
-        setSelectedUser(null);
-      } catch (err) {
-        console.error('Error toggling user login status:', err);
-        setError('Failed to update user login status. Please try again later.');
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          setUsers(users.map(user => 
+            user.id === selectedUser.id
+              ? { ...user, login_enabled: user.login_enabled === "1" ? "0" : "1" }
+              : user
+          ));
+          setSelectedUser(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to update user login status');
+        }
+      } catch (err: any) {
+        // Extract error message from response
+        let errorMessage = 'Failed to update user login status. Please try again later.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
       }
     }
   };
@@ -207,7 +228,6 @@ export function Users() {
       ));
       setSelectedUsernameReview(null);
     } catch (err) {
-      console.error('Error approving username:', err);
       setError('Failed to approve username. Please try again later.');
     } finally {
       setIsSubmitting(false);
@@ -231,7 +251,6 @@ export function Users() {
       ));
       setSelectedUsernameReview(null);
     } catch (err) {
-      console.error('Error declining username:', err);
       setError('Failed to decline username. Please try again later.');
     } finally {
       setIsSubmitting(false);
