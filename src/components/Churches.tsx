@@ -103,14 +103,14 @@ function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProp
 }
 
 function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: AddChurchModalProps) {
-  const [name, setName] = useState('Sample Church Test');
+  const [name, setName] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>('https://admin.goworship.co.uk/church_images/1749530592_dd9274077389342cf3b2.jpg');
-  const [address, setAddress] = useState('123 Church Street, City, Country');
-  const [latitude, setLatitude] = useState<string>('51.5074');
-  const [longitude, setLongitude] = useState<string>('-0.1278');
-  const [speakers, setSpeakers] = useState('John Doe, Jane Smith');
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+  const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<string>('');
+  const [longitude, setLongitude] = useState<string>('');
+  const [speakers, setSpeakers] = useState('');
   const [selectedDenomination, setSelectedDenomination] = useState<Denomination | null>(null);
   const [denominationSearch, setDenominationSearch] = useState('');
   const [showDenominationDropdown, setShowDenominationDropdown] = useState(false);
@@ -197,6 +197,7 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
         throw new Error('Invalid response format');
       }
     } catch (err: any) {
+      console.error('Error uploading photo:', err);
       setUploadError(
         err.response?.data?.message || 
         err.message || 
@@ -245,9 +246,11 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
         denomination_id: parseInt(selectedDenomination.id)
       };
 
+      console.log('Submitting church data:', churchData);
       await onConfirm(churchData);
       onClose();
     } catch (err: any) {
+      console.error('Submit error:', err);
       setError(err.message || 'Failed to create church. Please try again.');
     }
   };
@@ -536,20 +539,16 @@ function EditChurchModal({ church, onClose, onConfirm, isSubmitting, denominatio
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  // Set default denomination based on church's denomination_id
+  // Set initial denomination based on church's denomination_id
   useEffect(() => {
-    if (denominations.length > 0 && !selectedDenomination) {
+    if (denominations.length > 0 && church.denomination_id && !selectedDenomination) {
       const churchDenomination = denominations.find(d => d.id === church.denomination_id);
       if (churchDenomination) {
         setSelectedDenomination(churchDenomination);
         setDenominationSearch(churchDenomination.name);
-      } else if (denominations.length > 0) {
-        const firstDenomination = denominations[0];
-        setSelectedDenomination(firstDenomination);
-        setDenominationSearch(firstDenomination.name);
       }
     }
-  }, [denominations, selectedDenomination, church.denomination_id]);
+  }, [denominations, church.denomination_id, selectedDenomination]);
 
   // Filter denominations based on search term
   const filteredDenominations = denominations.filter(denomination => 
@@ -621,12 +620,12 @@ function EditChurchModal({ church, onClose, onConfirm, isSubmitting, denominatio
         throw new Error('Invalid response format');
       }
     } catch (err: any) {
+      console.error('Error uploading photo:', err);
       setUploadError(
         err.response?.data?.message || 
         err.message || 
         'Failed to upload photo. Please try again.'
       );
-      setUploadedPhotoUrl(null);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -672,6 +671,7 @@ function EditChurchModal({ church, onClose, onConfirm, isSubmitting, denominatio
       await onConfirm(churchData);
       onClose();
     } catch (err: any) {
+      console.error('Submit error:', err);
       setError(err.message || 'Failed to update church. Please try again.');
     }
   };
@@ -977,6 +977,7 @@ export function Churches() {
       setPagination(response.data.data.pagination);
     } catch (err) {
       setError('Failed to fetch churches. Please try again later.');
+      console.error('Error fetching churches:', err);
     } finally {
       setIsLoading(false);
     }
@@ -996,6 +997,7 @@ export function Churches() {
         setDenominations(response.data);
       }
     } catch (err) {
+      console.error('Error fetching denominations:', err);
       setDenominations([]);
     }
   };
@@ -1009,6 +1011,9 @@ export function Churches() {
     try {
       setIsSubmitting(true);
       setError(null);
+      
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/churches/create`);
+      console.log('Request data:', churchData);
       
       // Create FormData object for form-data request
       const formData = new FormData();
@@ -1030,12 +1035,15 @@ export function Churches() {
       }
       formData.append('denomination_id', churchData.denomination_id.toString());
       
+      // Make API call to save the church using the correct endpoint
       const response = await axios.post(`${ADMIN_BASE_URL}/churches/create`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
+
+      console.log('API Response:', response);
 
       // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
@@ -1046,6 +1054,9 @@ export function Churches() {
         throw new Error(response.data.message || 'Failed to create church');
       }
     } catch (err: any) {
+      console.error('Error adding church:', err);
+      console.error('Error response:', err.response);
+      
       // Extract error message from response
       let errorMessage = 'Failed to create church. Please try again.';
       if (err.response?.data?.message) {
@@ -1070,6 +1081,9 @@ export function Churches() {
       setIsSubmitting(true);
       setError(null);
       
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/churches/edit`);
+      console.log('Request data:', churchData);
+      
       // Create FormData object for form-data request
       const formData = new FormData();
       formData.append('id', editingChurch.id);
@@ -1091,12 +1105,15 @@ export function Churches() {
       }
       formData.append('denomination_id', churchData.denomination_id.toString());
       
+      // Make API call to update the church
       const response = await axios.post(`${ADMIN_BASE_URL}/churches/edit`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
+
+      console.log('API Response:', response);
 
       // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
@@ -1107,6 +1124,9 @@ export function Churches() {
         throw new Error(response.data.message || 'Failed to update church');
       }
     } catch (err: any) {
+      console.error('Error updating church:', err);
+      console.error('Error response:', err.response);
+      
       // Extract error message from response
       let errorMessage = 'Failed to update church. Please try again.';
       if (err.response?.data?.message) {
@@ -1157,6 +1177,8 @@ export function Churches() {
           throw new Error(response.data.message || 'Failed to delete church');
         }
       } catch (err: any) {
+        console.error('Error deleting church:', err);
+        
         // Extract error message from response
         let errorMessage = 'Failed to delete church. Please try again later.';
         if (err.response?.data?.message) {
@@ -1423,20 +1445,20 @@ export function Churches() {
         />
       )}
 
-      {showAddModal && (
-        <AddChurchModal
-          onClose={() => setShowAddModal(false)}
-          onConfirm={handleAddChurch}
-          isSubmitting={isSubmitting}
-          denominations={denominations}
-        />
-      )}
-
       {editingChurch && (
         <EditChurchModal
           church={editingChurch}
           onClose={() => setEditingChurch(null)}
           onConfirm={handleEditChurch}
+          isSubmitting={isSubmitting}
+          denominations={denominations}
+        />
+      )}
+
+      {showAddModal && (
+        <AddChurchModal
+          onClose={() => setShowAddModal(false)}
+          onConfirm={handleAddChurch}
           isSubmitting={isSubmitting}
           denominations={denominations}
         />
