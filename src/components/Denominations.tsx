@@ -280,20 +280,44 @@ export function Denominations() {
     if (editingDenomination) {
       try {
         setIsSubmitting(true);
-        await axios.put(
-          `${ADMIN_BASE_URL}/denominations/${editingDenomination.id}`,
-          { name },
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', editingDenomination.id);
+        formData.append('name', name.trim());
+        
+        const response = await axios.post(
+          `${ADMIN_BASE_URL}/denominations/edit`,
+          formData,
           {
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'multipart/form-data',
               'Accept': 'application/json'
             }
           }
         );
-        await fetchDenominations(currentPage);
-        setEditingDenomination(null);
-      } catch (err) {
-        throw err;
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchDenominations(currentPage);
+          setEditingDenomination(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to update denomination');
+        }
+      } catch (err: any) {
+        // Extract error message from response
+        let errorMessage = 'Failed to update denomination. Please try again.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setIsSubmitting(false);
       }
