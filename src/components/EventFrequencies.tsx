@@ -40,7 +40,7 @@ interface DeleteModalProps {
 interface EditModalProps {
   eventFrequency: EventFrequency;
   onClose: () => void;
-  onConfirm: (name: string, notes: string) => Promise<void>;
+  onConfirm: (name: string, notes: string, active: boolean, showme: boolean) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -82,6 +82,8 @@ function DeleteModal({ eventFrequency, onClose, onConfirm, isDeleting }: DeleteM
 function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditModalProps) {
   const [name, setName] = useState(eventFrequency.name);
   const [notes, setNotes] = useState(eventFrequency.notes);
+  const [active, setActive] = useState(eventFrequency.active === "1");
+  const [showme, setShowme] = useState(eventFrequency.showme === "1");
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,7 +93,7 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
       return;
     }
     try {
-      await onConfirm(name, notes);
+      await onConfirm(name, notes, active, showme);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to update event frequency');
@@ -133,6 +135,34 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter additional notes"
               />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="active"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="active" className="ml-2 block text-sm text-gray-700">
+                  Active
+                </label>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="showme"
+                  checked={showme}
+                  onChange={(e) => setShowme(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <label htmlFor="showme" className="ml-2 block text-sm text-gray-700">
+                  Show Me
+                </label>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -366,7 +396,7 @@ export function EventFrequencies() {
     }
   };
 
-  const handleEditEventFrequency = async (name: string, notes: string) => {
+  const handleEditEventFrequency = async (name: string, notes: string, active: boolean, showme: boolean) => {
     if (editingEventFrequency) {
       try {
         setIsSubmitting(true);
@@ -374,17 +404,23 @@ export function EventFrequencies() {
         
         // Create FormData object for form-data request
         const formData = new FormData();
+        formData.append('id', editingEventFrequency.id);
         formData.append('name', name.trim());
         formData.append('notes', notes.trim());
+        formData.append('active', active.toString());
+        formData.append('showme', showme.toString());
         
-        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/edit/${editingEventFrequency.id}`);
+        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/edit`);
         console.log('Form data:', {
+          id: editingEventFrequency.id,
           name: name.trim(),
-          notes: notes.trim()
+          notes: notes.trim(),
+          active: active.toString(),
+          showme: showme.toString()
         });
         
-        const response = await axios.put(
-          `${ADMIN_BASE_URL}/event-frequencies/edit/${editingEventFrequency.id}`,
+        const response = await axios.post(
+          `${ADMIN_BASE_URL}/event-frequencies/edit`,
           formData,
           {
             headers: {
