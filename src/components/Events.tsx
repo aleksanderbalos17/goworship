@@ -352,7 +352,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
         duration,
         church_id: selectedChurch.id,
         location_id: selectedLocation ? selectedLocation.id : '0', // '0' if no location selected
-        event_frequency_id: selectedFrequency.id,
+        frequency_id: selectedFrequency.id,
         additional_text: additionalText.trim()
       };
 
@@ -944,7 +944,7 @@ export function Events() {
       formData.append('duration', eventData.duration.toString());
       formData.append('church_id', eventData.church_id);
       formData.append('location_id', eventData.location_id); // '0' if no location
-      formData.append('event_frequency_id', eventData.event_frequency_id);
+      formData.append('frequency_id', eventData.frequency_id);
       formData.append('additional_text', eventData.additional_text);
       
       console.log('Making API request to:', `${ADMIN_BASE_URL}/events/create`);
@@ -970,7 +970,7 @@ export function Events() {
           time: parseInt(eventData.time.split(':')[0]) * 60 + parseInt(eventData.time.split(':')[1]),
           duration: eventData.duration,
           churchLocationId: eventData.location_id,
-          eventFrequencyId: eventData.event_frequency_id,
+          eventFrequencyId: eventData.frequency_id,
           additionalText: eventData.additional_text,
           churchName: churches.find(c => c.id === eventData.church_id)?.name || 'Unknown',
           locationAddress: 'Event location'
