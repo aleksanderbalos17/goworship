@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, Upload, MapPin, ChevronDown, X } from 'lucide-react';
 import axios from 'axios';
 import { ADMIN_BASE_URL } from '../constants/api';
 
@@ -14,6 +14,13 @@ interface Church {
   updated_at: string;
   speakers: string | null;
   denomination_id: string;
+}
+
+interface Denomination {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string | null;
 }
 
 interface PaginationData {
@@ -38,6 +45,13 @@ interface DeleteModalProps {
   onClose: () => void;
   onConfirm: () => Promise<void>;
   isDeleting: boolean;
+}
+
+interface AddChurchModalProps {
+  onClose: () => void;
+  onConfirm: (churchData: Omit<Church, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  isSubmitting: boolean;
+  denominations: Denomination[];
 }
 
 function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -69,14 +83,421 @@ function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProp
   );
 }
 
+function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: AddChurchModalProps) {
+  const [name, setName] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<string>('');
+  const [longitude, setLongitude] = useState<string>('');
+  const [speakers, setSpeakers] = useState('');
+  const [selectedDenomination, setSelectedDenomination] = useState<Denomination | null>(null);
+  const [denominationSearch, setDenominationSearch] = useState('');
+  const [showDenominationDropdown, setShowDenominationDropdown] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [error, setError] = useState('');
+
+  // Filter denominations based on search term
+  const filteredDenominations = denominations.filter(denomination => 
+    denomination.name.toLowerCase().includes(denominationSearch.toLowerCase())
+  );
+
+  const handleDenominationSelect = (denomination: Denomination) => {
+    setSelectedDenomination(denomination);
+    setDenominationSearch(denomination.name);
+    setShowDenominationDropdown(false);
+  };
+
+  const handleDenominationSearchChange = (value: string) => {
+    setDenominationSearch(value);
+    setShowDenominationDropdown(true);
+    if (!value) {
+      setSelectedDenomination(null);
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image file size must be less than 5MB');
+        return;
+      }
+
+      setPhotoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      setError('');
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  };
+
+  const uploadPhoto = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      setIsUploadingPhoto(true);
+      const response = await axios.post(`${ADMIN_BASE_URL}/upload/church-photo`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
+      });
+      
+      return response.data.data.photo_url;
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      throw new Error('Failed to upload photo');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude.toString());
+          setLongitude(position.coords.longitude.toString());
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          setError('Unable to get current location. Please enter coordinates manually.');
+        }
+      );
+    } else {
+      setError('Geolocation is not supported by this browser.');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!name.trim()) {
+      setError('Church name is required');
+      return;
+    }
+
+    if (!selectedDenomination) {
+      setError('Please select a denomination');
+      return;
+    }
+
+    try {
+      let photoUrl = null;
+      
+      // Upload photo if selected
+      if (photoFile) {
+        photoUrl = await uploadPhoto(photoFile);
+      }
+
+      const churchData = {
+        name: name.trim(),
+        photo_url: photoUrl,
+        address: address.trim() || null,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        speakers: speakers.trim() || null,
+        denomination_id: selectedDenomination.id
+      };
+
+      await onConfirm(churchData);
+      onClose();
+    } catch (err) {
+      setError('Failed to create church. Please try again.');
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.denomination-dropdown-container')) {
+        setShowDenominationDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-2xl font-semibold text-gray-900">Add New Church</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <form onSubmit={handleSubmit}>
+            {/* Row 1: Church Name */}
+            <div className="mb-6">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Church Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter church name"
+                required
+              />
+            </div>
+
+            {/* Row 2: Photo Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Church Photo
+              </label>
+              <div className="flex items-start space-x-4">
+                <div className="flex-1">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <label htmlFor="photo-upload" className="cursor-pointer">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-600">
+                        <span className="font-medium text-indigo-600 hover:text-indigo-500">
+                          Click to upload
+                        </span>{' '}
+                        or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </label>
+                  </div>
+                </div>
+                
+                {photoPreview && (
+                  <div className="relative">
+                    <img
+                      src={photoPreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Address */}
+            <div className="mb-6">
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Address
+              </label>
+              <textarea
+                id="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter complete church address"
+              />
+            </div>
+
+            {/* Row 4: Coordinates */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-2">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  id="latitude"
+                  value={latitude}
+                  onChange={(e) => setLatitude(e.target.value)}
+                  step="any"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="e.g., 40.7128"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-2">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  id="longitude"
+                  value={longitude}
+                  onChange={(e) => setLongitude(e.target.value)}
+                  step="any"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="e.g., -74.0060"
+                />
+              </div>
+              
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center space-x-2"
+                >
+                  <MapPin className="w-5 h-5" />
+                  <span>Get Current Location</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Row 5: Speakers and Denomination */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label htmlFor="speakers" className="block text-sm font-medium text-gray-700 mb-2">
+                  Speakers
+                </label>
+                <input
+                  type="text"
+                  id="speakers"
+                  value={speakers}
+                  onChange={(e) => setSpeakers(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter speaker names separated by commas"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Separate multiple speakers with commas (e.g., John Smith, Jane Doe)
+                </p>
+              </div>
+
+              <div className="relative denomination-dropdown-container">
+                <label htmlFor="denomination" className="block text-sm font-medium text-gray-700 mb-2">
+                  Denomination *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="denomination"
+                    value={denominationSearch}
+                    onChange={(e) => handleDenominationSearchChange(e.target.value)}
+                    onFocus={() => setShowDenominationDropdown(true)}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Search and select denomination"
+                    required
+                  />
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  
+                  {showDenominationDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                      <div className="max-h-40 overflow-y-auto">
+                        {filteredDenominations.length > 0 ? (
+                          filteredDenominations.map((denomination) => (
+                            <button
+                              key={denomination.id}
+                              type="button"
+                              onClick={() => handleDenominationSelect(denomination)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{denomination.name}</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {denominationSearch ? 'No denominations found' : 'Start typing to search denominations'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Map Integration Placeholder */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location on Map
+              </label>
+              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <MapPin className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm">Interactive map will be integrated here</p>
+                  <p className="text-xs">Click on map to set coordinates or use "Get Current Location" button</p>
+                  {latitude && longitude && (
+                    <p className="text-xs mt-2 text-indigo-600">
+                      Current: {latitude}, {longitude}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting || isUploadingPhoto}
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || isUploadingPhoto}
+                className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors"
+              >
+                {isSubmitting ? 'Creating...' : isUploadingPhoto ? 'Uploading...' : 'Create Church'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Churches() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChurch, setSelectedChurch] = useState<Church | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [churches, setChurches] = useState<Church[]>([]);
+  const [denominations, setDenominations] = useState<Denomination[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchChurches = async (page: number) => {
@@ -104,9 +525,48 @@ export function Churches() {
     }
   };
 
+  const fetchDenominations = async () => {
+    try {
+      const response = await axios.get(`${ADMIN_BASE_URL}/denominations/all`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.data.status === 'success' && response.data.data) {
+        setDenominations(response.data.data.denominations || response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setDenominations(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching denominations:', err);
+      setDenominations([]);
+    }
+  };
+
   useEffect(() => {
     fetchChurches(currentPage);
+    fetchDenominations();
   }, [currentPage]);
+
+  const handleAddChurch = async (churchData: Omit<Church, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      setIsSubmitting(true);
+      await axios.post(`${ADMIN_BASE_URL}/churches`, churchData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      await fetchChurches(currentPage);
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error adding church:', err);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDelete = (church: Church) => {
     setSelectedChurch(church);
@@ -137,18 +597,15 @@ export function Churches() {
     const pages: number[] = [];
     
     if (totalPages <= maxPages) {
-      // If total pages is less than max, show all pages
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always include first page
       pages.push(1);
       
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
       
-      // Adjust start and end to always show 3 pages in the middle
       if (currentPage <= 2) {
         end = 3;
       }
@@ -156,22 +613,18 @@ export function Churches() {
         start = totalPages - 2;
       }
       
-      // Add ellipsis if needed
       if (start > 2) {
-        pages.push(-1); // -1 represents ellipsis
+        pages.push(-1);
       }
       
-      // Add middle pages
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
       
-      // Add ellipsis if needed
       if (end < totalPages - 1) {
-        pages.push(-1); // -1 represents ellipsis
+        pages.push(-1);
       }
       
-      // Always include last page
       pages.push(totalPages);
     }
     
@@ -213,15 +666,24 @@ export function Churches() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">Churches</h1>
-        <div className="relative">
-          <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search churches..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
-          />
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search churches..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64"
+            />
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Church</span>
+          </button>
         </div>
       </div>
 
@@ -231,8 +693,8 @@ export function Churches() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speakers</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated At</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -240,9 +702,18 @@ export function Churches() {
             {filteredChurches.map((church) => (
               <tr key={church.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{church.name}</div>
+                  <div className="flex items-center">
+                    {church.photo_url && (
+                      <img
+                        src={church.photo_url}
+                        alt={church.name}
+                        className="w-10 h-10 rounded-full object-cover mr-3"
+                      />
+                    )}
+                    <div className="text-sm font-medium text-gray-900">{church.name}</div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4">
                   <div className="text-sm text-gray-500">{church.address || '-'}</div>
                   {church.latitude && church.longitude && (
                     <div className="text-xs text-gray-400">
@@ -250,11 +721,11 @@ export function Churches() {
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {church.created_at}
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-500">{church.speakers || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {church.updated_at || '-'}
+                  {church.created_at}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
@@ -358,6 +829,15 @@ export function Churches() {
           onClose={() => setSelectedChurch(null)}
           onConfirm={handleDeleteConfirm}
           isDeleting={isDeleting}
+        />
+      )}
+
+      {showAddModal && (
+        <AddChurchModal
+          onClose={() => setShowAddModal(false)}
+          onConfirm={handleAddChurch}
+          isSubmitting={isSubmitting}
+          denominations={denominations}
         />
       )}
     </div>
