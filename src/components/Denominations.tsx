@@ -230,7 +230,6 @@ export function Denominations() {
       setPagination(response.data.data.pagination);
     } catch (err) {
       setError('Failed to fetch denominations. Please try again later.');
-      console.error('Error fetching denominations:', err);
     } finally {
       setIsLoading(false);
     }
@@ -239,19 +238,39 @@ export function Denominations() {
   const handleAddDenomination = async (name: string) => {
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/denominations`, {
-        name
-      }, {
+      setError(null);
+      
+      // Create FormData object for form-data request
+      const formData = new FormData();
+      formData.append('name', name.trim());
+      
+      const response = await axios.post(`${ADMIN_BASE_URL}/denominations/create`, formData, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
-      await fetchDenominations(currentPage);
-      setShowAddModal(false);
-    } catch (err) {
-      console.error('Error adding denomination:', err);
-      throw err;
+      
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        await fetchDenominations(currentPage);
+        setShowAddModal(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to create denomination');
+      }
+    } catch (err: any) {
+      // Extract error message from response
+      let errorMessage = 'Failed to create denomination. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -274,7 +293,6 @@ export function Denominations() {
         await fetchDenominations(currentPage);
         setEditingDenomination(null);
       } catch (err) {
-        console.error('Error updating denomination:', err);
         throw err;
       } finally {
         setIsSubmitting(false);
@@ -294,7 +312,6 @@ export function Denominations() {
         await fetchDenominations(currentPage);
         setSelectedDenomination(null);
       } catch (err) {
-        console.error('Error deleting denomination:', err);
         setError('Failed to delete denomination. Please try again later.');
       } finally {
         setIsDeleting(false);
