@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { ADMIN_BASE_URL } from '../constants/api';
 
@@ -16,17 +16,6 @@ interface Event {
   additionalText: string;
   churchName: string;
   locationAddress: string;
-}
-
-interface Location {
-  id: string;
-  name: string;
-  address: string;
-  latitude: string | null;
-  longitude: string | null;
-  church_id: string;
-  created_at: string;
-  updated_at: string | null;
 }
 
 interface EventFrequency {
@@ -50,6 +39,17 @@ interface Church {
   updated_at: string;
   speakers: string | null;
   denomination_id: string;
+}
+
+interface Location {
+  id: string;
+  church_id: string;
+  name: string;
+  address: string;
+  latitude: string | null;
+  longitude: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
 interface EventType {
@@ -310,29 +310,16 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
         headers: { 'Accept': 'application/json' }
       });
       
-      let locationsData: Location[] = [];
       if (response.data.status === 'success' && response.data.data) {
-        locationsData = response.data.data.locations || response.data.data;
+        setLocations(response.data.data.locations || response.data.data);
       } else if (Array.isArray(response.data)) {
-        locationsData = response.data;
-      }
-      
-      setLocations(locationsData);
-      
-      // Auto-select first location if available
-      if (locationsData.length > 0) {
-        const firstLocation = locationsData[0];
-        setSelectedLocation(firstLocation);
-        setLocationSearch(firstLocation.name);
+        setLocations(response.data);
       } else {
-        setSelectedLocation(null);
-        setLocationSearch('');
+        setLocations([]);
       }
     } catch (err) {
       console.error('Error fetching locations:', err);
       setLocations([]);
-      setSelectedLocation(null);
-      setLocationSearch('');
     } finally {
       setIsLoadingLocations(false);
     }
@@ -356,10 +343,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setError('Please select a church');
       return;
     }
-    if (!selectedLocation) {
-      setError('Please select a location');
-      return;
-    }
     try {
       // Convert date to day of week (0 = Sunday, 1 = Monday, etc.)
       const eventDate = new Date(selectedDate);
@@ -376,11 +359,11 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
         time: timeInMinutes,
         duration,
         church_id: selectedChurch.id,
-        location_id: selectedLocation.id,
+        location_id: selectedLocation?.id || '0', // Default to '0' if no location selected
         eventFrequencyId: selectedFrequency.id,
         additionalText,
         churchName: selectedChurch.name,
-        locationAddress: selectedLocation.address
+        locationAddress: selectedLocation?.address || selectedChurch.address || 'No address provided'
       });
       onClose();
     } catch (err) {
@@ -508,12 +491,14 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <X className="w-6 h-6" />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
           
           <form onSubmit={handleSubmit}>
-            {/* Event Name */}
+            {/* Row 1: Event Name */}
             <div className="mb-6">
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                 Event Name *
@@ -529,7 +514,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               />
             </div>
 
-            {/* Date / Time / Duration */}
+            {/* Row 2: Date/Time/Duration */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
@@ -576,7 +561,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               </div>
             </div>
 
-            {/* Event Type / Event Frequency */}
+            {/* Row 3: Event Type / Event Frequency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="relative event-type-dropdown-container">
                 <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">
@@ -666,7 +651,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               </div>
             </div>
 
-            {/* Church / Location */}
+            {/* Row 4: Church / Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
@@ -715,7 +700,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
               <div className="relative location-dropdown-container">
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                  Location *
+                  Location <span className="text-gray-400">(Optional)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -731,17 +716,12 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                         ? "Select a church first" 
                         : isLoadingLocations 
                         ? "Loading locations..." 
-                        : "Search and select location"
+                        : locations.length === 0 
+                        ? "No locations available (will use default)"
+                        : "Search and select location (optional)"
                     }
-                    required
                   />
-                  {isLoadingLocations ? (
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-                    </div>
-                  ) : (
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  )}
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
                   {showLocationDropdown && selectedChurch && !isLoadingLocations && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
@@ -769,10 +749,15 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     </div>
                   )}
                 </div>
+                {selectedChurch && locations.length === 0 && !isLoadingLocations && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    No specific locations found for this church. Event will use church's main address.
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Row 5: Notes */}
             <div className="mb-6">
               <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-2">
                 Notes
@@ -798,7 +783,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -854,11 +839,11 @@ export function Events() {
     time: (Math.floor(Math.random() * 17) + 6) * 60 + Math.floor(Math.random() * 4) * 15, // Between 6:00 AM and 10:00 PM
     duration: [60, 90, 120][i % 3],
     church_id: `church-${i + 1}`,
-    location_id: `loc-${i + 1}`,
+    location_id: i % 3 === 0 ? '0' : `loc-${i + 1}`, // Some events have no specific location
     eventFrequencyId: `freq-${i + 1}`,
     additionalText: i % 3 === 0 ? 'Special notes for this event' : '',
     churchName: `Church ${Math.floor(i / 3) + 1}`,
-    locationAddress: `${100 + i} Church Street, City ${i % 5 + 1}`
+    locationAddress: i % 3 === 0 ? 'Main church building' : `Location ${i + 1}, ${100 + i} Church Street, City ${i % 5 + 1}`
   }));
 
   const [events, setEvents] = useState<Event[]>(mockEvents);
@@ -973,13 +958,14 @@ export function Events() {
       // Create FormData object for form-data request
       const formData = new FormData();
       formData.append('name', eventData.name);
-      formData.append('type_id', eventData.eventType); // This should be the type ID
-      formData.append('date', new Date().toISOString().split('T')[0]); // Use the selected date
-      formData.append('time', `${Math.floor(eventData.time / 60).toString().padStart(2, '0')}:${(eventData.time % 60).toString().padStart(2, '0')}`);
+      formData.append('event_type', eventData.eventType);
+      formData.append('day', eventData.day.toString());
+      formData.append('time', eventData.time.toString());
       formData.append('duration', eventData.duration.toString());
+      formData.append('church_id', eventData.church_id);
       formData.append('location_id', eventData.location_id);
-      formData.append('frequency_id', eventData.eventFrequencyId);
-      formData.append('notes', eventData.additionalText);
+      formData.append('event_frequency_id', eventData.eventFrequencyId);
+      formData.append('additional_text', eventData.additionalText);
       
       const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
         headers: {
@@ -1017,12 +1003,11 @@ export function Events() {
         const formData = new FormData();
         formData.append('id', editingEvent.id);
         if (eventData.name) formData.append('name', eventData.name);
-        if (eventData.eventType) formData.append('type_id', eventData.eventType);
-        if (eventData.time !== undefined) {
-          formData.append('time', `${Math.floor(eventData.time / 60).toString().padStart(2, '0')}:${(eventData.time % 60).toString().padStart(2, '0')}`);
-        }
+        if (eventData.eventType) formData.append('event_type', eventData.eventType);
+        if (eventData.day !== undefined) formData.append('day', eventData.day.toString());
+        if (eventData.time !== undefined) formData.append('time', eventData.time.toString());
         if (eventData.duration !== undefined) formData.append('duration', eventData.duration.toString());
-        if (eventData.additionalText !== undefined) formData.append('notes', eventData.additionalText);
+        if (eventData.additionalText !== undefined) formData.append('additional_text', eventData.additionalText);
         
         const response = await axios.post(`${ADMIN_BASE_URL}/events/edit`, formData, {
           headers: {
@@ -1140,7 +1125,9 @@ export function Events() {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{event.locationAddress}</div>
+                  <div className="text-sm text-gray-900">
+                    {event.location_id === '0' ? 'Main church building' : event.locationAddress}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-500">{event.additionalText || '-'}</div>
