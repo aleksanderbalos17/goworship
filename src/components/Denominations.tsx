@@ -328,15 +328,38 @@ export function Denominations() {
     if (selectedDenomination) {
       try {
         setIsDeleting(true);
-        await axios.delete(`${ADMIN_BASE_URL}/denominations/${selectedDenomination.id}`, {
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('id', selectedDenomination.id);
+        
+        const response = await axios.post(`${ADMIN_BASE_URL}/denominations/delete`, formData, {
           headers: {
+            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json'
           }
         });
-        await fetchDenominations(currentPage);
-        setSelectedDenomination(null);
-      } catch (err) {
-        setError('Failed to delete denomination. Please try again later.');
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchDenominations(currentPage);
+          setSelectedDenomination(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to delete denomination');
+        }
+      } catch (err: any) {
+        // Extract error message from response
+        let errorMessage = 'Failed to delete denomination. Please try again later.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setIsDeleting(false);
       }
