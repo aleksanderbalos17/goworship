@@ -231,7 +231,7 @@ export function EventTypes() {
   const handleAddEventType = async (name: string) => {
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/event-types`, {
+      await axios.post(`${ADMIN_BASE_URL}/event-types/create`, {
         name: name
       }, {
         headers: {
