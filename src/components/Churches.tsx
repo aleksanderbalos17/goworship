@@ -54,6 +54,102 @@ interface AddChurchModalProps {
   denominations: Denomination[];
 }
 
+interface InteractiveMapProps {
+  latitude: string;
+  longitude: string;
+  onLocationSelect: (lat: string, lng: string) => void;
+}
+
+function InteractiveMap({ latitude, longitude, onLocationSelect }: InteractiveMapProps) {
+  const [mapCenter, setMapCenter] = useState({ lat: 51.505, lng: -0.09 }); // Default to London
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setMapCenter({ lat, lng });
+        setSelectedLocation({ lat, lng });
+      }
+    }
+  }, [latitude, longitude]);
+
+  const handleMapClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Simple coordinate calculation for demonstration
+    // In a real implementation, you'd use a proper map library like Leaflet or Google Maps
+    const lng = mapCenter.lng + ((x - rect.width / 2) / rect.width) * 0.1;
+    const lat = mapCenter.lat - ((y - rect.height / 2) / rect.height) * 0.1;
+    
+    setSelectedLocation({ lat, lng });
+    onLocationSelect(lat.toFixed(6), lng.toFixed(6));
+  };
+
+  return (
+    <div className="relative">
+      <div 
+        className="w-full h-64 bg-gradient-to-br from-blue-100 to-green-100 rounded-lg border border-gray-300 cursor-crosshair relative overflow-hidden"
+        onClick={handleMapClick}
+      >
+        {/* Grid pattern to simulate map */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="grid grid-cols-8 grid-rows-8 h-full">
+            {Array.from({ length: 64 }).map((_, i) => (
+              <div key={i} className="border border-gray-400"></div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Map center indicator */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+        </div>
+        
+        {/* Selected location marker */}
+        {selectedLocation && (
+          <div 
+            className="absolute transform -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${50 + ((selectedLocation.lng - mapCenter.lng) / 0.1) * 50}%`,
+              top: `${50 - ((selectedLocation.lat - mapCenter.lat) / 0.1) * 50}%`
+            }}
+          >
+            <MapPin className="w-6 h-6 text-red-500 drop-shadow-lg" />
+          </div>
+        )}
+        
+        {/* Instructions overlay */}
+        <div className="absolute top-4 left-4 bg-white bg-opacity-90 rounded-lg p-3 shadow-md">
+          <p className="text-sm text-gray-700 font-medium">Click on the map to set location</p>
+          {selectedLocation && (
+            <p className="text-xs text-gray-600 mt-1">
+              Selected: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+            </p>
+          )}
+        </div>
+        
+        {/* Zoom controls placeholder */}
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md">
+          <button className="block w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-t-lg border-b">
+            +
+          </button>
+          <button className="block w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-b-lg">
+            −
+          </button>
+        </div>
+      </div>
+      
+      <p className="text-sm text-gray-500 mt-2">
+        Click anywhere on the map to set the church location. You can also enter coordinates manually in the fields above.
+      </p>
+    </div>
+  );
+}
+
 function DeleteModal({ church, onClose, onConfirm, isDeleting }: DeleteModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -170,21 +266,9 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
     }
   };
 
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLatitude(position.coords.latitude.toString());
-          setLongitude(position.coords.longitude.toString());
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setError('Unable to get current location. Please enter coordinates manually.');
-        }
-      );
-    } else {
-      setError('Geolocation is not supported by this browser.');
-    }
+  const handleLocationSelect = (lat: string, lng: string) => {
+    setLatitude(lat);
+    setLongitude(lng);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -333,7 +417,7 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
             </div>
 
             {/* Row 4: Coordinates */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-2">
                   Latitude
@@ -362,17 +446,6 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="e.g., -74.0060"
                 />
-              </div>
-              
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={getCurrentLocation}
-                  className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center space-x-2"
-                >
-                  <MapPin className="w-5 h-5" />
-                  <span>Get Current Location</span>
-                </button>
               </div>
             </div>
 
@@ -438,23 +511,16 @@ function AddChurchModal({ onClose, onConfirm, isSubmitting, denominations }: Add
               </div>
             </div>
 
-            {/* Map Integration Placeholder */}
+            {/* Interactive Map */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Location on Map
               </label>
-              <div className="w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <MapPin className="w-12 h-12 mx-auto mb-2" />
-                  <p className="text-sm">Interactive map will be integrated here</p>
-                  <p className="text-xs">Click on map to set coordinates or use "Get Current Location" button</p>
-                  {latitude && longitude && (
-                    <p className="text-xs mt-2 text-indigo-600">
-                      Current: {latitude}, {longitude}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <InteractiveMap
+                latitude={latitude}
+                longitude={longitude}
+                onLocationSelect={handleLocationSelect}
+              />
             </div>
 
             {error && (
