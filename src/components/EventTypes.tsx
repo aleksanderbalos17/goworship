@@ -43,7 +43,7 @@ interface EditModalProps {
 
 interface AddModalProps {
   onClose: () => void;
-  onConfirm: (name: string) => void;
+  onConfirm: (name: string) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -86,7 +86,13 @@ function EditModal({ eventType, onClose, onConfirm, isSubmitting }: EditModalPro
       setError('Event type name is required');
       return;
     }
-    await onConfirm(name);
+    try {
+      await onConfirm(name);
+      onClose();
+    } catch (err: any) {
+      console.error('Edit error:', err);
+      setError(err.message || 'Failed to update event type');
+    }
   };
 
   return (
@@ -135,26 +141,68 @@ function EditModal({ eventType, onClose, onConfirm, isSubmitting }: EditModalPro
 }
 
 function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
-  const [name, setName] = useState('');
+  // Pre-fill with sample data for testing
+  const [name, setName] = useState('Sample Event Type Test');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Event type name is required');
       return;
     }
-    onConfirm(name);
+    try {
+      console.log('Submitting event type:', name.trim());
+      await onConfirm(name.trim());
+      onClose();
+    } catch (err: any) {
+      console.error('Submit error:', err);
+      setError(err.message || 'Failed to create event type');
+    }
   };
+
+  // Sample event type options for quick testing
+  const sampleEventTypes = [
+    'Sunday Service',
+    'Prayer Meeting',
+    'Bible Study',
+    'Youth Group',
+    'Worship Night',
+    'Community Outreach',
+    'Men\'s Fellowship',
+    'Women\'s Ministry',
+    'Children\'s Church',
+    'Choir Practice'
+  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Event Type</h3>
+        
+        {/* Quick Sample Selection */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Quick Select (for testing)
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {sampleEventTypes.slice(0, 6).map((sampleType) => (
+              <button
+                key={sampleType}
+                type="button"
+                onClick={() => setName(sampleType)}
+                className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                {sampleType}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Name
+              Event Type Name *
             </label>
             <input
               type="text"
@@ -166,9 +214,22 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Enter event type name"
+              required
             />
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
           </div>
+
+          {/* API Testing Info */}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium mb-1">API Testing Info:</p>
+            <p className="text-xs text-blue-600">
+              Endpoint: POST {ADMIN_BASE_URL}/event-types/create
+            </p>
+            <p className="text-xs text-blue-600">
+              Payload: {JSON.stringify({ name: name.trim() })}
+            </p>
+          </div>
+
           <div className="flex space-x-4">
             <button
               type="button"
@@ -183,7 +244,7 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
               className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Adding...' : 'Add'}
+              {isSubmitting ? 'Creating...' : 'Create Event Type'}
             </button>
           </div>
         </form>
@@ -231,19 +292,46 @@ export function EventTypes() {
   const handleAddEventType = async (name: string) => {
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/event-types/create`, {
-        name: name
-      }, {
+      setError(null);
+      
+      const requestData = { name };
+      
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/event-types/create`);
+      console.log('Request data:', requestData);
+      
+      const response = await axios.post(`${ADMIN_BASE_URL}/event-types/create`, requestData, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
-      await fetchEventTypes(currentPage);
-      setShowAddModal(false);
-    } catch (err) {
+
+      console.log('API Response:', response);
+
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        // Refresh the event types list to show the new event type
+        await fetchEventTypes(currentPage);
+        setShowAddModal(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to create event type');
+      }
+    } catch (err: any) {
       console.error('Error adding event type:', err);
-      throw err;
+      console.error('Error response:', err.response);
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create event type. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -331,6 +419,15 @@ export function EventTypes() {
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              fetchEventTypes(currentPage);
+            }}
+            className="mt-2 text-sm text-indigo-600 hover:text-indigo-800"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -358,6 +455,21 @@ export function EventTypes() {
             <Plus className="w-5 h-5" />
             <span>Add Event Type</span>
           </button>
+        </div>
+      </div>
+
+      {/* API Testing Info Panel */}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="text-sm font-medium text-blue-800 mb-2">API Testing Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-blue-700">
+          <div>
+            <p><strong>Create Endpoint:</strong> POST {ADMIN_BASE_URL}/event-types/create</p>
+            <p><strong>List Endpoint:</strong> GET {ADMIN_BASE_URL}/event-types</p>
+          </div>
+          <div>
+            <p><strong>Sample Payload:</strong> {JSON.stringify({ name: "Sample Event Type" })}</p>
+            <p><strong>Expected Response:</strong> {JSON.stringify({ status: "success" })}</p>
+          </div>
         </div>
       </div>
 
