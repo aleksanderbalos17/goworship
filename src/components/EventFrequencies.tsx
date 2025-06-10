@@ -93,8 +93,8 @@ function EditModal({ eventFrequency, onClose, onConfirm, isSubmitting }: EditMod
     try {
       await onConfirm(name, notes);
       onClose();
-    } catch (err) {
-      setError('Failed to update event frequency');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update event frequency');
     }
   };
 
@@ -177,8 +177,8 @@ function AddModal({ onClose, onConfirm, isSubmitting }: AddModalProps) {
     try {
       await onConfirm(name, notes, active, showme);
       onClose();
-    } catch (err) {
-      setError('Failed to create event frequency');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create event frequency');
     }
   };
 
@@ -312,22 +312,55 @@ export function EventFrequencies() {
   const handleAddEventFrequency = async (name: string, notes: string, active: boolean, showme: boolean) => {
     try {
       setIsSubmitting(true);
-      await axios.post(`${ADMIN_BASE_URL}/event-frequencies`, {
-        name,
-        active,
-        notes,
-        showme
-      }, {
+      setError(null);
+      
+      // Create FormData object for form-data request
+      const formData = new FormData();
+      formData.append('name', name.trim());
+      formData.append('notes', notes.trim());
+      formData.append('active', active.toString());
+      formData.append('showme', showme.toString());
+      
+      console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/create`);
+      console.log('Form data:', {
+        name: name.trim(),
+        notes: notes.trim(),
+        active: active.toString(),
+        showme: showme.toString()
+      });
+      
+      const response = await axios.post(`${ADMIN_BASE_URL}/event-frequencies/create`, formData, {
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'
         }
       });
-      await fetchEventFrequencies(currentPage);
-      setShowAddModal(false);
-    } catch (err) {
+      
+      console.log('API Response:', response);
+      
+      // Check if the response indicates success
+      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+        await fetchEventFrequencies(currentPage);
+        setShowAddModal(false);
+      } else {
+        throw new Error(response.data.message || 'Failed to create event frequency');
+      }
+    } catch (err: any) {
       console.error('Error creating event frequency:', err);
-      throw err;
+      console.error('Error response:', err.response);
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create event frequency. Please try again.';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -337,21 +370,55 @@ export function EventFrequencies() {
     if (editingEventFrequency) {
       try {
         setIsSubmitting(true);
-        await axios.put(
-          `${ADMIN_BASE_URL}/event-frequencies/${editingEventFrequency.id}`,
-          { name, notes },
+        setError(null);
+        
+        // Create FormData object for form-data request
+        const formData = new FormData();
+        formData.append('name', name.trim());
+        formData.append('notes', notes.trim());
+        
+        console.log('Making API request to:', `${ADMIN_BASE_URL}/event-frequencies/edit/${editingEventFrequency.id}`);
+        console.log('Form data:', {
+          name: name.trim(),
+          notes: notes.trim()
+        });
+        
+        const response = await axios.put(
+          `${ADMIN_BASE_URL}/event-frequencies/edit/${editingEventFrequency.id}`,
+          formData,
           {
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'multipart/form-data',
               'Accept': 'application/json'
             }
           }
         );
-        await fetchEventFrequencies(currentPage);
-        setEditingEventFrequency(null);
-      } catch (err) {
+        
+        console.log('API Response:', response);
+        
+        // Check if the response indicates success
+        if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+          await fetchEventFrequencies(currentPage);
+          setEditingEventFrequency(null);
+        } else {
+          throw new Error(response.data.message || 'Failed to update event frequency');
+        }
+      } catch (err: any) {
         console.error('Error updating event frequency:', err);
-        throw err;
+        console.error('Error response:', err.response);
+        
+        // Extract error message from response
+        let errorMessage = 'Failed to update event frequency. Please try again.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
+        throw new Error(errorMessage);
       } finally {
         setIsSubmitting(false);
       }
