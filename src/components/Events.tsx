@@ -13,7 +13,7 @@ interface Event {
   duration: number;
   church_id: string;
   church_name: string;
-  location_id: string;
+  location_id: string | null;
   frequency_id: string;
   frequency_name: string;
   notes: string;
@@ -44,22 +44,22 @@ interface Church {
   denomination_id: string;
 }
 
-interface ChurchLocation {
-  id: string;
-  church_id: string;
-  name: string;
-  address: string;
-  latitude: string;
-  longitude: string;
-  created_at: string;
-  updated_at: string;
-}
-
 interface EventType {
   id: string;
   name: string;
   created_at: string;
   updated_at: string | null;
+}
+
+interface ChurchLocation {
+  id: string;
+  church_id: string;
+  name: string;
+  address: string;
+  latitude: string | null;
+  longitude: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface PaginationData {
@@ -89,7 +89,7 @@ interface DeleteModalProps {
 interface EditModalProps {
   event: Event;
   onClose: () => void;
-  onConfirm: (eventData: any) => Promise<void>;
+  onConfirm: (eventData: FormData) => Promise<void>;
   isSubmitting: boolean;
   eventFrequencies: EventFrequency[];
   churches: Church[];
@@ -99,7 +99,7 @@ interface EditModalProps {
 
 interface AddModalProps {
   onClose: () => void;
-  onConfirm: (eventData: any) => Promise<void>;
+  onConfirm: (eventData: FormData) => Promise<void>;
   isSubmitting: boolean;
   eventFrequencies: EventFrequency[];
   churches: Church[];
@@ -156,7 +156,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
   const [notes, setNotes] = useState(event.notes);
   const [error, setError] = useState('');
 
-  // Initialize form with current event data
+  // Initialize form with event data
   useEffect(() => {
     // Set event type
     const eventType = eventTypes.find(type => type.id === event.type_id);
@@ -179,8 +179,8 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
       setChurchSearch(church.name);
     }
 
-    // Set location if available
-    if (event.location_id && event.location_id !== '0') {
+    // Set location if exists
+    if (event.location_id) {
       const location = churchLocations.find(loc => loc.id === event.location_id);
       if (location) {
         setSelectedLocation(location);
@@ -208,21 +208,24 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
       return;
     }
     try {
-      await onConfirm({
-        id: event.id,
-        name: name.trim(),
-        type_id: selectedEventType.id,
-        date: selectedDate,
-        time: selectedTime,
-        duration: duration.toString(),
-        church_id: selectedChurch.id,
-        location_id: selectedLocation?.id || '0',
-        frequency_id: selectedFrequency.id,
-        notes: notes.trim()
-      });
+      const formData = new FormData();
+      formData.append('id', event.id);
+      formData.append('name', name.trim());
+      formData.append('type_id', selectedEventType.id);
+      formData.append('date', selectedDate);
+      formData.append('time', selectedTime);
+      formData.append('duration', duration.toString());
+      formData.append('church_id', selectedChurch.id);
+      if (selectedLocation) {
+        formData.append('location_id', selectedLocation.id);
+      }
+      formData.append('frequency_id', selectedFrequency.id);
+      formData.append('notes', notes.trim());
+
+      await onConfirm(formData);
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update event');
+    } catch (err) {
+      setError('Failed to update event');
     }
   };
 
@@ -338,7 +341,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-8">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-2xl font-semibold text-gray-900">Edit Event</h3>
@@ -350,23 +353,68 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
             </button>
           </div>
           
-          <form onSubmit={handleSubmit}>
-            {/* Row 1: Event Name / Event Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Event Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Event Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter event name"
+              />
+            </div>
+
+            {/* Date / Time / Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
                 </label>
                 <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  type="date"
+                  id="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter event name"
                 />
               </div>
 
+              <div>
+                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
+                  Time (24h format)
+                </label>
+                <input
+                  type="time"
+                  id="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  id="duration"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  min="15"
+                  step="15"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Event Type / Frequency */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative event-type-dropdown-container">
                 <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">
                   Event Type
@@ -406,46 +454,6 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Row 2: Date and Time / Duration / Frequency */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div>
-                <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date and Time
-                </label>
-                <div className="space-y-2">
-                  <input
-                    type="date"
-                    id="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                  <input
-                    type="time"
-                    id="time"
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
-                  Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  id="duration"
-                  value={duration}
-                  onChange={(e) => setDuration(parseInt(e.target.value))}
-                  min="15"
-                  step="15"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
               </div>
 
               <div className="relative frequency-dropdown-container">
@@ -493,8 +501,8 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
               </div>
             </div>
 
-            {/* Row 3: Church / Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Church / Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
                   Church
@@ -541,7 +549,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
 
               <div className="relative location-dropdown-container">
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                  Location (Optional)
+                  Location <span className="text-gray-400">(Optional)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -550,9 +558,9 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                     value={locationSearch}
                     onChange={(e) => handleLocationSearchChange(e.target.value)}
                     onFocus={() => setShowLocationDropdown(true)}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder={selectedChurch ? "Search locations for this church" : "Select a church first"}
                     disabled={!selectedChurch}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                    placeholder={selectedChurch ? "Search and select location" : "Select a church first"}
                   />
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
@@ -582,16 +590,11 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                     </div>
                   )}
                 </div>
-                {selectedChurch && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {filteredLocations.length} location(s) available for {selectedChurch.name}
-                  </p>
-                )}
               </div>
             </div>
 
             {/* Additional Notes */}
-            <div className="mb-6">
+            <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Notes
               </label>
@@ -606,7 +609,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
             </div>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
@@ -677,20 +680,23 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       return;
     }
     try {
-      await onConfirm({
-        name: name.trim(),
-        type_id: selectedEventType.id,
-        date: selectedDate,
-        time: selectedTime,
-        duration: duration.toString(),
-        church_id: selectedChurch.id,
-        location_id: selectedLocation?.id || '0',
-        frequency_id: selectedFrequency.id,
-        notes: notes.trim()
-      });
+      const formData = new FormData();
+      formData.append('name', name.trim());
+      formData.append('type_id', selectedEventType.id);
+      formData.append('date', selectedDate);
+      formData.append('time', selectedTime);
+      formData.append('duration', duration.toString());
+      formData.append('church_id', selectedChurch.id);
+      if (selectedLocation) {
+        formData.append('location_id', selectedLocation.id);
+      }
+      formData.append('frequency_id', selectedFrequency.id);
+      formData.append('notes', notes.trim());
+
+      await onConfirm(formData);
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create event');
+    } catch (err) {
+      setError('Failed to create event');
     }
   };
 
@@ -806,7 +812,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-8">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-2xl font-semibold text-gray-900">Add New Event</h3>
@@ -818,23 +824,68 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
             </button>
           </div>
           
-          <form onSubmit={handleSubmit}>
-            {/* Row 1: Event Name / Event Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Event Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                Event Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Enter event name"
+              />
+            </div>
+
+            {/* Date / Time / Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
                 </label>
                 <input
-                  type="text"
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  type="date"
+                  id="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter event name"
                 />
               </div>
 
+              <div>
+                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
+                  Time (24h format)
+                </label>
+                <input
+                  type="time"
+                  id="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  id="duration"
+                  value={duration}
+                  onChange={(e) => setDuration(parseInt(e.target.value))}
+                  min="15"
+                  step="15"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Event Type / Frequency */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative event-type-dropdown-container">
                 <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-2">
                   Event Type
@@ -874,46 +925,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Row 2: Date and Time / Duration / Frequency */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div>
-                <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date and Time
-                </label>
-                <div className="space-y-2">
-                  <input
-                    type="date"
-                    id="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                  <input
-                    type="time"
-                    id="time"
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
-                  Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  id="duration"
-                  value={duration}
-                  onChange={(e) => setDuration(parseInt(e.target.value))}
-                  min="15"
-                  step="15"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
               </div>
 
               <div className="relative frequency-dropdown-container">
@@ -961,8 +972,8 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               </div>
             </div>
 
-            {/* Row 3: Church / Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Church / Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
                   Church
@@ -1009,7 +1020,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
               <div className="relative location-dropdown-container">
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                  Location (Optional)
+                  Location <span className="text-gray-400">(Optional)</span>
                 </label>
                 <div className="relative">
                   <input
@@ -1018,9 +1029,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     value={locationSearch}
                     onChange={(e) => handleLocationSearchChange(e.target.value)}
                     onFocus={() => setShowLocationDropdown(true)}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    placeholder={selectedChurch ? "Search locations for this church" : "Select a church first"}
                     disabled={!selectedChurch}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                    placeholder={selectedChurch ? "Search and select location" : "Select a church first"}
                   />
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
@@ -1050,16 +1061,11 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     </div>
                   )}
                 </div>
-                {selectedChurch && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {filteredLocations.length} location(s) available for {selectedChurch.name}
-                  </p>
-                )}
               </div>
             </div>
 
             {/* Additional Notes */}
-            <div className="mb-6">
+            <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
                 Additional Notes
               </label>
@@ -1074,7 +1080,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
             </div>
 
             {error && (
-              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
@@ -1112,12 +1118,13 @@ function formatTime(timeString: string): string {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  const options: Intl.DateTimeFormatOptions = { 
+    weekday: 'short', 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  };
+  return date.toLocaleDateString('en-US', options);
 }
 
 export function Events() {
@@ -1131,8 +1138,8 @@ export function Events() {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
   const [churches, setChurches] = useState<Church[]>([]);
-  const [churchLocations, setChurchLocations] = useState<ChurchLocation[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [churchLocations, setChurchLocations] = useState<ChurchLocation[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1155,7 +1162,6 @@ export function Events() {
       setPagination(response.data.data.pagination);
     } catch (err) {
       setError('Failed to fetch events. Please try again later.');
-      console.error('Error fetching events:', err);
     } finally {
       setIsLoading(false);
     }
@@ -1180,7 +1186,6 @@ export function Events() {
       eventTypesData.sort((a, b) => a.name.localeCompare(b.name));
       setEventTypes(eventTypesData);
     } catch (err) {
-      console.error('Error fetching event types:', err);
       setEventTypes([]);
     }
   };
@@ -1200,7 +1205,6 @@ export function Events() {
         setEventFrequencies(response.data);
       }
     } catch (err) {
-      console.error('Error fetching event frequencies:', err);
       setEventFrequencies([]);
     }
   };
@@ -1220,7 +1224,6 @@ export function Events() {
         setChurches(response.data);
       }
     } catch (err) {
-      console.error('Error fetching churches:', err);
       setChurches([]);
     }
   };
@@ -1240,7 +1243,6 @@ export function Events() {
         setChurchLocations(response.data);
       }
     } catch (err) {
-      console.error('Error fetching church locations:', err);
       setChurchLocations([]);
     }
   };
@@ -1256,21 +1258,10 @@ export function Events() {
     fetchChurchLocations();
   }, []);
 
-  const handleAddEvent = async (eventData: any) => {
+  const handleAddEvent = async (formData: FormData) => {
     try {
       setIsSubmitting(true);
       setError(null);
-      
-      const formData = new FormData();
-      formData.append('name', eventData.name);
-      formData.append('type_id', eventData.type_id);
-      formData.append('date', eventData.date);
-      formData.append('time', eventData.time);
-      formData.append('duration', eventData.duration);
-      formData.append('church_id', eventData.church_id);
-      formData.append('location_id', eventData.location_id);
-      formData.append('frequency_id', eventData.frequency_id);
-      formData.append('notes', eventData.notes);
       
       const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
         headers: {
@@ -1302,22 +1293,10 @@ export function Events() {
     }
   };
 
-  const handleEditEvent = async (eventData: any) => {
+  const handleEditEvent = async (formData: FormData) => {
     try {
       setIsSubmitting(true);
       setError(null);
-      
-      const formData = new FormData();
-      formData.append('id', eventData.id);
-      formData.append('name', eventData.name);
-      formData.append('type_id', eventData.type_id);
-      formData.append('date', eventData.date);
-      formData.append('time', eventData.time);
-      formData.append('duration', eventData.duration);
-      formData.append('church_id', eventData.church_id);
-      formData.append('location_id', eventData.location_id);
-      formData.append('frequency_id', eventData.frequency_id);
-      formData.append('notes', eventData.notes);
       
       const response = await axios.post(`${ADMIN_BASE_URL}/events/edit`, formData, {
         headers: {
