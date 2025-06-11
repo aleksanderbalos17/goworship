@@ -1,15 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
-import axios from 'axios';
-import { ADMIN_BASE_URL } from '../constants/api';
-import { AddEventModal } from './events/AddEventModal';
-import { EditEventModal } from './events/EditEventModal';
-import { DeleteModal } from './events/DeleteModal';
-import { Event, EventsApiResponse, PaginationData, EventFormData } from './events/types';
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  Plus,
+} from "lucide-react";
+import axios from "axios";
+import { ADMIN_BASE_URL } from "../constants/api";
+import { AddEventModal } from "./events/AddEventModal";
+import { EditEventModal } from "./events/EditEventModal";
+import { DeleteModal } from "./events/DeleteModal";
+import {
+  Event,
+  EventsApiResponse,
+  PaginationData,
+  EventFormData,
+} from "./events/types";
 
 export function Events() {
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -24,20 +36,23 @@ export function Events() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get<EventsApiResponse>(`${ADMIN_BASE_URL}/events`, {
-        params: {
-          page,
-          per_page: 30
-        },
-        headers: {
-          'Accept': 'application/json'
+      const response = await axios.get<EventsApiResponse>(
+        `${ADMIN_BASE_URL}/events`,
+        {
+          params: {
+            page,
+            per_page: 30,
+          },
+          headers: {
+            Accept: "application/json",
+          },
         }
-      });
+      );
       setEvents(response.data.data.events);
       setPagination(response.data.data.pagination);
     } catch (err) {
-      setError('Failed to fetch events. Please try again later.');
-      console.error('Error fetching events:', err);
+      setError("Failed to fetch events. Please try again later.");
+      console.error("Error fetching events:", err);
     } finally {
       setIsLoading(false);
     }
@@ -51,35 +66,43 @@ export function Events() {
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       const formData = new FormData();
-      formData.append('name', eventData.name);
-      formData.append('type_id', eventData.eventType!.id);
-      formData.append('date', eventData.date);
-      formData.append('time', eventData.time);
-      formData.append('duration', eventData.duration);
-      formData.append('church_id', eventData.church!.id);
+      formData.append("name", eventData.name);
+      formData.append("type_id", eventData.eventType!.id);
+      formData.append("date", eventData.date);
+      formData.append("time", eventData.time);
+      formData.append("duration", eventData.duration);
+      formData.append("church_id", eventData.church!.id);
       if (eventData.location) {
-        formData.append('location_id', eventData.location.id);
+        formData.append("location_id", eventData.location.id);
       }
-      formData.append('frequency_id', eventData.frequency!.id);
-      formData.append('notes', eventData.notes);
-      
-      const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json'
+      formData.append("frequency_id", eventData.frequency!.id);
+      formData.append("notes", eventData.notes);
+
+      const response = await axios.post(
+        `${ADMIN_BASE_URL}/events/create`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+          },
         }
-      });
-      
-      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+      );
+
+      if (
+        response.data.status === "success" ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
         await fetchEvents(currentPage);
         setShowAddModal(false);
       } else {
-        throw new Error(response.data.message || 'Failed to create event');
+        throw new Error(response.data.message || "Failed to create event");
       }
     } catch (err: any) {
-      let errorMessage = 'Failed to create event. Please try again.';
+      let errorMessage = "Failed to create event. Please try again.";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.error) {
@@ -87,7 +110,7 @@ export function Events() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -97,40 +120,48 @@ export function Events() {
 
   const handleEditEvent = async (eventData: EventFormData) => {
     if (!editingEvent) return;
-    
+
     try {
       setIsSubmitting(true);
       setError(null);
-      
+
       const formData = new FormData();
-      formData.append('id', editingEvent.id);
-      formData.append('name', eventData.name);
-      formData.append('type_id', eventData.eventType!.id);
-      formData.append('date', eventData.date);
-      formData.append('time', eventData.time);
-      formData.append('duration', eventData.duration);
-      formData.append('church_id', eventData.church!.id);
+      formData.append("id", editingEvent.id);
+      formData.append("name", eventData.name);
+      formData.append("type_id", eventData.eventType!.id);
+      formData.append("date", eventData.date);
+      formData.append("time", eventData.time);
+      formData.append("duration", eventData.duration);
+      formData.append("church_id", eventData.church!.id);
       if (eventData.location) {
-        formData.append('location_id', eventData.location.id);
+        formData.append("location_id", eventData.location.id);
       }
-      formData.append('frequency_id', eventData.frequency!.id);
-      formData.append('notes', eventData.notes);
-      
-      const response = await axios.post(`${ADMIN_BASE_URL}/events/edit`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json'
+      formData.append("frequency_id", eventData.frequency!.id);
+      formData.append("notes", eventData.notes);
+
+      const response = await axios.post(
+        `${ADMIN_BASE_URL}/events/edit`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+          },
         }
-      });
-      
-      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+      );
+
+      if (
+        response.data.status === "success" ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
         await fetchEvents(currentPage);
         setEditingEvent(null);
       } else {
-        throw new Error(response.data.message || 'Failed to update event');
+        throw new Error(response.data.message || "Failed to update event");
       }
     } catch (err: any) {
-      let errorMessage = 'Failed to update event. Please try again.';
+      let errorMessage = "Failed to update event. Please try again.";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.error) {
@@ -138,7 +169,7 @@ export function Events() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -148,29 +179,37 @@ export function Events() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedEvent) return;
-    
+
     try {
       setIsDeleting(true);
       setError(null);
-      
+
       const formData = new FormData();
-      formData.append('id', selectedEvent.id);
-      
-      const response = await axios.post(`${ADMIN_BASE_URL}/events/delete`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json'
+      formData.append("id", selectedEvent.id);
+
+      const response = await axios.post(
+        `${ADMIN_BASE_URL}/events/delete`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+          },
         }
-      });
-      
-      if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
+      );
+
+      if (
+        response.data.status === "success" ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
         await fetchEvents(currentPage);
         setSelectedEvent(null);
       } else {
-        throw new Error(response.data.message || 'Failed to delete event');
+        throw new Error(response.data.message || "Failed to delete event");
       }
     } catch (err: any) {
-      let errorMessage = 'Failed to delete event. Please try again later.';
+      let errorMessage = "Failed to delete event. Please try again later.";
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.response?.data?.error) {
@@ -178,7 +217,7 @@ export function Events() {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsDeleting(false);
@@ -188,76 +227,79 @@ export function Events() {
   const getPageNumbers = (currentPage: number, totalPages: number) => {
     const maxPages = 5;
     const pages: number[] = [];
-    
+
     if (totalPages <= maxPages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
       pages.push(1);
-      
+
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
-      
+
       if (currentPage <= 2) {
         end = 3;
       }
       if (currentPage >= totalPages - 1) {
         start = totalPages - 2;
       }
-      
+
       if (start > 2) {
         pages.push(-1);
       }
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
-      
+
       if (end < totalPages - 1) {
         pages.push(-1);
       }
-      
+
       pages.push(totalPages);
     }
-    
+
     return pages;
   };
 
   const formatDateTime = (date: string, time: string, duration: string) => {
-  const eventDate = new Date(date);
+    const eventDate = new Date(date);
 
-  // Get weekday (e.g., Sunday)
-  const dayOfWeek = eventDate.toLocaleDateString('en-GB', {
-    weekday: 'long'
-  });
+    // Get weekday (e.g., Sunday)
+    const dayOfWeek = eventDate.toLocaleDateString("en-GB", {
+      weekday: "long",
+    });
 
-  // Get UK date (e.g., 09/06/2025)
-  const ukFormattedDate = eventDate.toLocaleDateString('en-GB');
+    // Get UK date (e.g., 09/06/2025)
+    const ukFormattedDate = eventDate.toLocaleDateString("en-GB");
 
-  // Parse time and format
-  const [hours, minutes] = time.split(':');
-  const timeObj = new Date();
-  timeObj.setHours(parseInt(hours), parseInt(minutes));
-  const formattedTime = timeObj.toLocaleTimeString('en-GB', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
+    // Parse time and format
+    const [hours, minutes] = time.split(":");
+    const timeObj = new Date();
+    timeObj.setHours(parseInt(hours), parseInt(minutes));
+    const formattedTime = timeObj.toLocaleTimeString("en-GB", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
 
-  return {
-    dayOfWeek,
-    ukFormattedDate,
-    timeWithDuration: `${formattedTime} (${duration}min)`
+    return {
+      dayOfWeek,
+      ukFormattedDate,
+      timeWithDuration: `${formattedTime} (${duration}min)`,
+    };
   };
-};
 
-
-  const filteredEvents = events.filter(event => 
-    event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (event.type_name && event.type_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (event.church_name && event.church_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (event.notes && event.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredEvents = events.filter(
+    (event) =>
+      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.type_name &&
+        event.type_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (event.church_name &&
+        event.church_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (event.notes &&
+        event.notes.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (isLoading && !events.length) {
@@ -281,7 +323,7 @@ export function Events() {
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">{error}</p>
-          <button 
+          <button
             onClick={() => {
               setError(null);
               fetchEvents(currentPage);
@@ -348,9 +390,13 @@ export function Events() {
             {filteredEvents.map((event) => (
               <tr key={event.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{event.name}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {event.name}
+                  </div>
                   {event.frequency_name && (
-                    <div className="text-xs text-gray-500">{event.frequency_name}</div>
+                    <div className="text-xs text-gray-500">
+                      {event.frequency_name}
+                    </div>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -361,27 +407,31 @@ export function Events() {
                   )}
                 </td>
                 <td className="px-6 py-4">
-  {(() => {
-    const { dayOfWeek, ukFormattedDate, timeWithDuration } = formatDateTime(event.date, event.time, event.duration);
-    return (
-      <div className="text-sm text-gray-900 space-y-1">
-        <div>{dayOfWeek}</div>
-        <div>{ukFormattedDate}</div>
-        <div>{timeWithDuration}</div>
-      </div>
-    );
-  })()}
-</td>
-
+                  {(() => {
+                    const { dayOfWeek, ukFormattedDate, timeWithDuration } =
+                      formatDateTime(event.date, event.time, event.duration);
+                    return (
+                      <div className="text-sm text-gray-900 space-y-1">
+                        <div>{dayOfWeek}</div>
+                        <div>{ukFormattedDate}</div>
+                        <div>{timeWithDuration}</div>
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{event.church_name || '-'}</div>
+                  <div className="text-sm text-gray-900">
+                    {event.church_name || "-"}
+                  </div>
                   {event.location_name && (
-                    <div className="text-xs text-gray-500">{event.location_name}</div>
+                    <div className="text-xs text-gray-500">
+                      {event.location_name}
+                    </div>
                   )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 max-w-xs truncate">
-                    {event.notes || '-'}
+                    {event.notes || "-"}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -409,14 +459,18 @@ export function Events() {
           <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
-                onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
                 disabled={!pagination.has_prev_page}
                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 Previous
               </button>
               <button
-                onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.min(page + 1, pagination.total_pages)
+                  )
+                }
                 disabled={!pagination.has_next_page}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
@@ -426,24 +480,40 @@ export function Events() {
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{(pagination.current_page - 1) * pagination.per_page + 1}</span> to{' '}
+                  Showing{" "}
                   <span className="font-medium">
-                    {Math.min(pagination.current_page * pagination.per_page, pagination.total)}
-                  </span>{' '}
-                  of <span className="font-medium">{pagination.total}</span> results
+                    {(pagination.current_page - 1) * pagination.per_page + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium">
+                    {Math.min(
+                      pagination.current_page * pagination.per_page,
+                      pagination.total
+                    )}
+                  </span>{" "}
+                  of <span className="font-medium">{pagination.total}</span>{" "}
+                  results
                 </p>
               </div>
               <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <nav
+                  className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                  aria-label="Pagination"
+                >
                   <button
-                    onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(page - 1, 1))
+                    }
                     disabled={!pagination.has_prev_page}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                   >
                     <span className="sr-only">Previous</span>
                     <ChevronLeft className="h-5 w-5" />
                   </button>
-                  {getPageNumbers(pagination.current_page, pagination.total_pages).map((page, index) => (
+                  {getPageNumbers(
+                    pagination.current_page,
+                    pagination.total_pages
+                  ).map((page, index) =>
                     page === -1 ? (
                       <span
                         key={`ellipsis-${index}`}
@@ -457,16 +527,20 @@ export function Events() {
                         onClick={() => setCurrentPage(page)}
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           page === pagination.current_page
-                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            ? "z-10 bg-indigo-50 border-indigo-500 text-indigo-600"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                         }`}
                       >
                         {page}
                       </button>
                     )
-                  ))}
+                  )}
                   <button
-                    onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
+                    onClick={() =>
+                      setCurrentPage((page) =>
+                        Math.min(page + 1, pagination.total_pages)
+                      )
+                    }
                     disabled={!pagination.has_next_page}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                   >
