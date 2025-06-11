@@ -6,22 +6,19 @@ import { ADMIN_BASE_URL } from '../constants/api';
 interface Event {
   id: string;
   name: string;
-  eventType: string;
-  day: number;
-  time: number;
+  type_id: string;
+  type_name: string;
+  date: string;
+  time: string;
   duration: number;
-  churchLocationId: string;
-  eventFrequencyId: string;
-  additionalText: string;
-  churchName: string;
-  locationAddress: string;
-  // API response fields
-  type_id?: string;
-  date?: string;
-  church_id?: string;
-  location_id?: string;
-  frequency_id?: string;
-  notes?: string;
+  church_id: string;
+  church_name: string;
+  location_id: string;
+  frequency_id: string;
+  frequency_name: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface EventFrequency {
@@ -52,10 +49,10 @@ interface ChurchLocation {
   church_id: string;
   name: string;
   address: string;
-  latitude: string | null;
-  longitude: string | null;
+  latitude: string;
+  longitude: string;
   created_at: string;
-  updated_at: string | null;
+  updated_at: string;
 }
 
 interface EventType {
@@ -97,6 +94,7 @@ interface EditModalProps {
   eventFrequencies: EventFrequency[];
   churches: Church[];
   eventTypes: EventType[];
+  churchLocations: ChurchLocation[];
 }
 
 interface AddModalProps {
@@ -106,6 +104,7 @@ interface AddModalProps {
   eventFrequencies: EventFrequency[];
   churches: Church[];
   eventTypes: EventType[];
+  churchLocations: ChurchLocation[];
 }
 
 function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps) {
@@ -137,31 +136,13 @@ function DeleteModal({ event, onClose, onConfirm, isDeleting }: DeleteModalProps
   );
 }
 
-function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, churches, eventTypes }: EditModalProps) {
+function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, churches, eventTypes, churchLocations }: EditModalProps) {
   const [name, setName] = useState(event.name);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [eventTypeSearch, setEventTypeSearch] = useState('');
   const [showEventTypeDropdown, setShowEventTypeDropdown] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    if (event.date) {
-      return event.date;
-    }
-    // Convert day number to date (for legacy events)
-    const today = new Date();
-    const dayDiff = event.day - today.getDay();
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + dayDiff);
-    return targetDate.toISOString().split('T')[0];
-  });
-  const [selectedTime, setSelectedTime] = useState(() => {
-    if (event.time) {
-      return event.time;
-    }
-    // Convert minutes to HH:MM format (for legacy events)
-    const hours = Math.floor(event.time / 60);
-    const minutes = event.time % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  });
+  const [selectedDate, setSelectedDate] = useState(event.date);
+  const [selectedTime, setSelectedTime] = useState(event.time);
   const [duration, setDuration] = useState(event.duration);
   const [selectedFrequency, setSelectedFrequency] = useState<EventFrequency | null>(null);
   const [frequencySearch, setFrequencySearch] = useState('');
@@ -172,70 +153,41 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
   const [selectedLocation, setSelectedLocation] = useState<ChurchLocation | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [locations, setLocations] = useState<ChurchLocation[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [additionalText, setAdditionalText] = useState(event.additionalText || event.notes || '');
+  const [notes, setNotes] = useState(event.notes);
   const [error, setError] = useState('');
 
-  // Initialize form with event data
+  // Initialize form with current event data
   useEffect(() => {
     // Set event type
-    const eventType = eventTypes.find(et => et.name === event.eventType || et.id === event.type_id);
+    const eventType = eventTypes.find(type => type.id === event.type_id);
     if (eventType) {
       setSelectedEventType(eventType);
       setEventTypeSearch(eventType.name);
     }
 
     // Set frequency
-    const frequency = eventFrequencies.find(ef => ef.id === event.eventFrequencyId || ef.id === event.frequency_id);
+    const frequency = eventFrequencies.find(freq => freq.id === event.frequency_id);
     if (frequency) {
       setSelectedFrequency(frequency);
       setFrequencySearch(frequency.name);
     }
 
     // Set church
-    const church = churches.find(c => c.id === event.churchLocationId || c.id === event.church_id);
+    const church = churches.find(c => c.id === event.church_id);
     if (church) {
       setSelectedChurch(church);
       setChurchSearch(church.name);
-      // Fetch locations for this church
-      fetchLocations(church.id);
     }
-  }, [event, eventTypes, eventFrequencies, churches]);
 
-  // Fetch locations when church is selected
-  const fetchLocations = async (churchId: string) => {
-    try {
-      setIsLoadingLocations(true);
-      const response = await axios.get(`${ADMIN_BASE_URL}/church-locations/all`, {
-        params: { church_id: churchId },
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      if (response.data.status === 'success' && response.data.data) {
-        const fetchedLocations = response.data.data.locations || response.data.data;
-        setLocations(fetchedLocations);
-        
-        // Set current location if it exists
-        const currentLocation = fetchedLocations.find((loc: ChurchLocation) => 
-          loc.id === event.churchLocationId || loc.id === event.location_id
-        );
-        if (currentLocation) {
-          setSelectedLocation(currentLocation);
-          setLocationSearch(currentLocation.name);
-        }
-      } else if (Array.isArray(response.data)) {
-        setLocations(response.data);
-      } else {
-        setLocations([]);
+    // Set location if available
+    if (event.location_id && event.location_id !== '0') {
+      const location = churchLocations.find(loc => loc.id === event.location_id);
+      if (location) {
+        setSelectedLocation(location);
+        setLocationSearch(location.name);
       }
-    } catch (err) {
-      console.error('Error fetching locations:', err);
-      setLocations([]);
-    } finally {
-      setIsLoadingLocations(false);
     }
-  };
+  }, [event, eventTypes, eventFrequencies, churches, churchLocations]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,22 +207,19 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
       setError('Please select a church');
       return;
     }
-    
     try {
-      const eventData = {
+      await onConfirm({
         id: event.id,
         name: name.trim(),
         type_id: selectedEventType.id,
         date: selectedDate,
         time: selectedTime,
-        duration,
+        duration: duration.toString(),
         church_id: selectedChurch.id,
-        location_id: selectedLocation ? selectedLocation.id : '0',
+        location_id: selectedLocation?.id || '0',
         frequency_id: selectedFrequency.id,
-        notes: additionalText.trim()
-      };
-
-      await onConfirm(eventData);
+        notes: notes.trim()
+      });
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to update event');
@@ -296,10 +245,13 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
     church.name.toLowerCase().includes(churchSearch.toLowerCase())
   );
 
-  // Filter locations based on search term
-  const filteredLocations = locations.filter(location => 
-    location.name.toLowerCase().includes(locationSearch.toLowerCase())
-  );
+  // Filter locations for selected church
+  const filteredLocations = selectedChurch 
+    ? churchLocations.filter(location => 
+        location.church_id === selectedChurch.id &&
+        location.name.toLowerCase().includes(locationSearch.toLowerCase())
+      )
+    : [];
 
   const handleEventTypeSelect = (eventType: EventType) => {
     setSelectedEventType(eventType);
@@ -333,11 +285,9 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
     setSelectedChurch(church);
     setChurchSearch(church.name);
     setShowChurchDropdown(false);
-    
-    // Reset location selection and fetch new locations
+    // Reset location when church changes
     setSelectedLocation(null);
     setLocationSearch('');
-    fetchLocations(church.id);
   };
 
   const handleChurchSearchChange = (value: string) => {
@@ -347,7 +297,6 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
       setSelectedChurch(null);
       setSelectedLocation(null);
       setLocationSearch('');
-      setLocations([]);
     }
   };
 
@@ -460,32 +409,28 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
               </div>
             </div>
 
-            {/* Row 2: Date / Time / Duration */}
+            {/* Row 2: Date and Time / Duration / Frequency */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date
+                  Date and Time
                 </label>
-                <input
-                  type="date"
-                  id="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Time (24h format)
-                </label>
-                <input
-                  type="time"
-                  id="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    id="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <input
+                    type="time"
+                    id="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -502,13 +447,10 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-            </div>
 
-            {/* Row 3: Frequency */}
-            <div className="grid grid-cols-1 gap-6 mb-6">
               <div className="relative frequency-dropdown-container">
                 <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Frequency
+                  Frequency
                 </label>
                 <div className="relative">
                   <input
@@ -551,7 +493,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
               </div>
             </div>
 
-            {/* Row 4: Church / Location */}
+            {/* Row 3: Church / Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
@@ -608,13 +550,13 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                     value={locationSearch}
                     onChange={(e) => handleLocationSearchChange(e.target.value)}
                     onFocus={() => setShowLocationDropdown(true)}
-                    disabled={!selectedChurch || isLoadingLocations}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder={!selectedChurch ? "Select a church first" : isLoadingLocations ? "Loading locations..." : "Search and select location (optional)"}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder={selectedChurch ? "Search locations for this church" : "Select a church first"}
+                    disabled={!selectedChurch}
                   />
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
-                  {showLocationDropdown && selectedChurch && !isLoadingLocations && (
+                  {showLocationDropdown && selectedChurch && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
                       <div className="max-h-40 overflow-y-auto">
                         {filteredLocations.length > 0 ? (
@@ -642,7 +584,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
                 </div>
                 {selectedChurch && (
                   <p className="mt-1 text-sm text-gray-500">
-                    Select a church to see available locations
+                    {filteredLocations.length} location(s) available for {selectedChurch.name}
                   </p>
                 )}
               </div>
@@ -650,13 +592,13 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
 
             {/* Additional Notes */}
             <div className="mb-6">
-              <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes
               </label>
               <textarea
-                id="additionalText"
-                value={additionalText}
-                onChange={(e) => setAdditionalText(e.target.value)}
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter additional notes, special instructions, or event description"
@@ -693,7 +635,7 @@ function EditModal({ event, onClose, onConfirm, isSubmitting, eventFrequencies, 
   );
 }
 
-function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches, eventTypes }: AddModalProps) {
+function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches, eventTypes, churchLocations }: AddModalProps) {
   const [name, setName] = useState('');
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [eventTypeSearch, setEventTypeSearch] = useState('');
@@ -713,34 +655,8 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   const [selectedLocation, setSelectedLocation] = useState<ChurchLocation | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [locations, setLocations] = useState<ChurchLocation[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [additionalText, setAdditionalText] = useState('');
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
-
-  // Fetch locations when church is selected
-  const fetchLocations = async (churchId: string) => {
-    try {
-      setIsLoadingLocations(true);
-      const response = await axios.get(`${ADMIN_BASE_URL}/church-locations/all`, {
-        params: { church_id: churchId },
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      if (response.data.status === 'success' && response.data.data) {
-        setLocations(response.data.data.locations || response.data.data);
-      } else if (Array.isArray(response.data)) {
-        setLocations(response.data);
-      } else {
-        setLocations([]);
-      }
-    } catch (err) {
-      console.error('Error fetching locations:', err);
-      setLocations([]);
-    } finally {
-      setIsLoadingLocations(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -760,24 +676,21 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setError('Please select a church');
       return;
     }
-    
     try {
-      const eventData = {
+      await onConfirm({
         name: name.trim(),
-        type_id: selectedEventType.id, // Pass event type ID instead of name
-        date: selectedDate, // YYYY-MM-DD format
-        time: selectedTime, // HH:MM 24-hour format
-        duration,
+        type_id: selectedEventType.id,
+        date: selectedDate,
+        time: selectedTime,
+        duration: duration.toString(),
         church_id: selectedChurch.id,
-        location_id: selectedLocation ? selectedLocation.id : '0', // '0' if no location selected
+        location_id: selectedLocation?.id || '0',
         frequency_id: selectedFrequency.id,
-        additional_text: additionalText.trim()
-      };
-
-      await onConfirm(eventData);
+        notes: notes.trim()
+      });
       onClose();
-    } catch (err) {
-      setError('Failed to create event');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create event');
     }
   };
 
@@ -800,10 +713,13 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     church.name.toLowerCase().includes(churchSearch.toLowerCase())
   );
 
-  // Filter locations based on search term
-  const filteredLocations = locations.filter(location => 
-    location.name.toLowerCase().includes(locationSearch.toLowerCase())
-  );
+  // Filter locations for selected church
+  const filteredLocations = selectedChurch 
+    ? churchLocations.filter(location => 
+        location.church_id === selectedChurch.id &&
+        location.name.toLowerCase().includes(locationSearch.toLowerCase())
+      )
+    : [];
 
   const handleEventTypeSelect = (eventType: EventType) => {
     setSelectedEventType(eventType);
@@ -837,11 +753,9 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
     setSelectedChurch(church);
     setChurchSearch(church.name);
     setShowChurchDropdown(false);
-    
-    // Reset location selection and fetch new locations
+    // Reset location when church changes
     setSelectedLocation(null);
     setLocationSearch('');
-    fetchLocations(church.id);
   };
 
   const handleChurchSearchChange = (value: string) => {
@@ -851,7 +765,6 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
       setSelectedChurch(null);
       setSelectedLocation(null);
       setLocationSearch('');
-      setLocations([]);
     }
   };
 
@@ -964,32 +877,28 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               </div>
             </div>
 
-            {/* Row 2: Date / Time / Duration */}
+            {/* Row 2: Date and Time / Duration / Frequency */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <div>
                 <label htmlFor="datetime" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date
+                  Date and Time
                 </label>
-                <input
-                  type="date"
-                  id="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
-                  Time (24h format)
-                </label>
-                <input
-                  type="time"
-                  id="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    id="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <input
+                    type="time"
+                    id="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1006,13 +915,10 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-            </div>
 
-            {/* Row 3: Frequency */}
-            <div className="grid grid-cols-1 gap-6 mb-6">
               <div className="relative frequency-dropdown-container">
                 <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Frequency
+                  Frequency
                 </label>
                 <div className="relative">
                   <input
@@ -1055,7 +961,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
               </div>
             </div>
 
-            {/* Row 4: Church / Location */}
+            {/* Row 3: Church / Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="relative church-dropdown-container">
                 <label htmlFor="church" className="block text-sm font-medium text-gray-700 mb-2">
@@ -1112,13 +1018,13 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                     value={locationSearch}
                     onChange={(e) => handleLocationSearchChange(e.target.value)}
                     onFocus={() => setShowLocationDropdown(true)}
-                    disabled={!selectedChurch || isLoadingLocations}
-                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder={!selectedChurch ? "Select a church first" : isLoadingLocations ? "Loading locations..." : "Search and select location (optional)"}
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder={selectedChurch ? "Search locations for this church" : "Select a church first"}
+                    disabled={!selectedChurch}
                   />
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   
-                  {showLocationDropdown && selectedChurch && !isLoadingLocations && (
+                  {showLocationDropdown && selectedChurch && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
                       <div className="max-h-40 overflow-y-auto">
                         {filteredLocations.length > 0 ? (
@@ -1146,7 +1052,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 </div>
                 {selectedChurch && (
                   <p className="mt-1 text-sm text-gray-500">
-                    Select a church to see available locations
+                    {filteredLocations.length} location(s) available for {selectedChurch.name}
                   </p>
                 )}
               </div>
@@ -1154,13 +1060,13 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
 
             {/* Additional Notes */}
             <div className="mb-6">
-              <label htmlFor="additionalText" className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes
               </label>
               <textarea
-                id="additionalText"
-                value={additionalText}
-                onChange={(e) => setAdditionalText(e.target.value)}
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter additional notes, special instructions, or event description"
@@ -1178,7 +1084,7 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -1197,17 +1103,21 @@ function AddModal({ onClose, onConfirm, isSubmitting, eventFrequencies, churches
   );
 }
 
-function formatTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+function formatTime(timeString: string): string {
+  const [hours, minutes] = timeString.split(':').map(Number);
   const period = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
-  return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-function getDayName(day: number): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[day];
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 export function Events() {
@@ -1218,18 +1128,16 @@ export function Events() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
   const [eventFrequencies, setEventFrequencies] = useState<EventFrequency[]>([]);
   const [churches, setChurches] = useState<Church[]>([]);
+  const [churchLocations, setChurchLocations] = useState<ChurchLocation[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingFrequencies, setIsLoadingFrequencies] = useState(false);
-  const [isLoadingChurches, setIsLoadingChurches] = useState(false);
-  const [isLoadingEventTypes, setIsLoadingEventTypes] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch events with pagination
+  // Fetch events from API
   const fetchEvents = async (page: number) => {
     try {
       setIsLoading(true);
@@ -1256,86 +1164,84 @@ export function Events() {
   // Fetch event types when component mounts
   const fetchEventTypes = async () => {
     try {
-      setIsLoadingEventTypes(true);
       const response = await axios.get(`${ADMIN_BASE_URL}/event-types/all`, {
         headers: {
           'Accept': 'application/json'
         }
       });
       
-      // Handle different possible response structures
       let eventTypesData: EventType[] = [];
       if (response.data.status === 'success' && response.data.data) {
         eventTypesData = response.data.data.event_types || response.data.data;
       } else if (Array.isArray(response.data)) {
         eventTypesData = response.data;
-      } else {
-        console.warn('Unexpected response structure:', response.data);
-        eventTypesData = [];
       }
       
-      // Sort event types by name
       eventTypesData.sort((a, b) => a.name.localeCompare(b.name));
       setEventTypes(eventTypesData);
     } catch (err) {
       console.error('Error fetching event types:', err);
       setEventTypes([]);
-    } finally {
-      setIsLoadingEventTypes(false);
     }
   };
 
   // Fetch event frequencies when component mounts
   const fetchEventFrequencies = async () => {
     try {
-      setIsLoadingFrequencies(true);
       const response = await axios.get(`${ADMIN_BASE_URL}/event-frequencies/all`, {
         headers: {
           'Accept': 'application/json'
         }
       });
       
-      // Handle different possible response structures
       if (response.data.status === 'success' && response.data.data) {
         setEventFrequencies(response.data.data.frequencies || response.data.data);
       } else if (Array.isArray(response.data)) {
         setEventFrequencies(response.data);
-      } else {
-        console.warn('Unexpected response structure:', response.data);
-        setEventFrequencies([]);
       }
     } catch (err) {
       console.error('Error fetching event frequencies:', err);
       setEventFrequencies([]);
-    } finally {
-      setIsLoadingFrequencies(false);
     }
   };
 
   // Fetch churches when component mounts
   const fetchChurches = async () => {
     try {
-      setIsLoadingChurches(true);
       const response = await axios.get(`${ADMIN_BASE_URL}/churches/all`, {
         headers: {
           'Accept': 'application/json'
         }
       });
       
-      // Handle different possible response structures
       if (response.data.status === 'success' && response.data.data) {
         setChurches(response.data.data.churches || response.data.data);
       } else if (Array.isArray(response.data)) {
         setChurches(response.data);
-      } else {
-        console.warn('Unexpected response structure:', response.data);
-        setChurches([]);
       }
     } catch (err) {
       console.error('Error fetching churches:', err);
       setChurches([]);
-    } finally {
-      setIsLoadingChurches(false);
+    }
+  };
+
+  // Fetch church locations when component mounts
+  const fetchChurchLocations = async () => {
+    try {
+      const response = await axios.get(`${ADMIN_BASE_URL}/church-locations/all`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.data.status === 'success' && response.data.data) {
+        setChurchLocations(response.data.data.locations || response.data.data);
+      } else if (Array.isArray(response.data)) {
+        setChurchLocations(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching church locations:', err);
+      setChurchLocations([]);
     }
   };
 
@@ -1347,30 +1253,24 @@ export function Events() {
     fetchEventTypes();
     fetchEventFrequencies();
     fetchChurches();
+    fetchChurchLocations();
   }, []);
-
-  const filteredEvents = events.filter(event => 
-    event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.eventType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.churchName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleAddEvent = async (eventData: any) => {
     try {
       setIsSubmitting(true);
       setError(null);
       
-      // Create FormData object for form-data request
       const formData = new FormData();
       formData.append('name', eventData.name);
-      formData.append('type_id', eventData.type_id); // Pass event type ID
-      formData.append('date', eventData.date); // YYYY-MM-DD format
-      formData.append('time', eventData.time); // HH:MM 24-hour format
-      formData.append('duration', eventData.duration.toString());
+      formData.append('type_id', eventData.type_id);
+      formData.append('date', eventData.date);
+      formData.append('time', eventData.time);
+      formData.append('duration', eventData.duration);
       formData.append('church_id', eventData.church_id);
-      formData.append('location_id', eventData.location_id); // '0' if no location
+      formData.append('location_id', eventData.location_id);
       formData.append('frequency_id', eventData.frequency_id);
-      formData.append('additional_text', eventData.additional_text);
+      formData.append('notes', eventData.notes);
       
       const response = await axios.post(`${ADMIN_BASE_URL}/events/create`, formData, {
         headers: {
@@ -1379,19 +1279,13 @@ export function Events() {
         }
       });
       
-      // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-        // Refresh events list
         await fetchEvents(currentPage);
         setShowAddModal(false);
       } else {
         throw new Error(response.data.message || 'Failed to create event');
       }
     } catch (err: any) {
-      console.error('Error adding event:', err);
-      console.error('Error response:', err.response);
-      
-      // Extract error message from response
       let errorMessage = 'Failed to create event. Please try again.';
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -1413,14 +1307,13 @@ export function Events() {
       setIsSubmitting(true);
       setError(null);
       
-      // Create FormData object for form-data request
       const formData = new FormData();
       formData.append('id', eventData.id);
       formData.append('name', eventData.name);
       formData.append('type_id', eventData.type_id);
       formData.append('date', eventData.date);
       formData.append('time', eventData.time);
-      formData.append('duration', eventData.duration.toString());
+      formData.append('duration', eventData.duration);
       formData.append('church_id', eventData.church_id);
       formData.append('location_id', eventData.location_id);
       formData.append('frequency_id', eventData.frequency_id);
@@ -1433,19 +1326,13 @@ export function Events() {
         }
       });
       
-      // Check if the response indicates success
       if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-        // Refresh events list
         await fetchEvents(currentPage);
         setEditingEvent(null);
       } else {
         throw new Error(response.data.message || 'Failed to update event');
       }
     } catch (err: any) {
-      console.error('Error updating event:', err);
-      console.error('Error response:', err.response);
-      
-      // Extract error message from response
       let errorMessage = 'Failed to update event. Please try again.';
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -1468,7 +1355,6 @@ export function Events() {
         setIsDeleting(true);
         setError(null);
         
-        // Create FormData object for form-data request
         const formData = new FormData();
         formData.append('id', selectedEvent.id);
         
@@ -1479,19 +1365,13 @@ export function Events() {
           }
         });
         
-        // Check if the response indicates success
         if (response.data.status === 'success' || response.status === 200 || response.status === 201) {
-          // Refresh events list
           await fetchEvents(currentPage);
           setSelectedEvent(null);
         } else {
           throw new Error(response.data.message || 'Failed to delete event');
         }
       } catch (err: any) {
-        console.error('Error deleting event:', err);
-        console.error('Error response:', err.response);
-        
-        // Extract error message from response
         let errorMessage = 'Failed to delete event. Please try again later.';
         if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
@@ -1507,6 +1387,13 @@ export function Events() {
       }
     }
   };
+
+  const filteredEvents = events.filter(event => 
+    event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.type_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.church_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.notes.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (isLoading && !events.length) {
     return (
@@ -1573,9 +1460,9 @@ export function Events() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Church</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -1585,26 +1472,24 @@ export function Events() {
               <tr key={event.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{event.name}</div>
-                  <div className="text-sm text-gray-500">{event.churchName}</div>
+                  <div className="text-sm text-gray-500">{event.frequency_name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {event.eventType}
+                    {event.type_name}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {event.date ? event.date : getDayName(event.day)}
-                  </div>
+                  <div className="text-sm text-gray-900">{formatDate(event.date)}</div>
                   <div className="text-sm text-gray-500">
-                    {event.time && typeof event.time === 'string' ? event.time : formatTime(event.time)} ({event.duration} mins)
+                    {formatTime(event.time)} ({event.duration} mins)
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{event.locationAddress}</div>
+                  <div className="text-sm text-gray-900">{event.church_name}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-500">{event.additionalText || event.notes || '-'}</div>
+                  <div className="text-sm text-gray-500 max-w-xs truncate">{event.notes || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex space-x-2">
@@ -1633,14 +1518,14 @@ export function Events() {
               <button
                 onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
                 disabled={!pagination.has_prev_page}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
                 disabled={!pagination.has_next_page}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 Next
               </button>
@@ -1660,7 +1545,7 @@ export function Events() {
                   <button
                     onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
                     disabled={!pagination.has_prev_page}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                   >
                     <span className="sr-only">Previous</span>
                     <ChevronLeft className="h-5 w-5" />
@@ -1684,7 +1569,7 @@ export function Events() {
                   <button
                     onClick={() => setCurrentPage(page => Math.min(page + 1, pagination.total_pages))}
                     disabled={!pagination.has_next_page}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                   >
                     <span className="sr-only">Next</span>
                     <ChevronRight className="h-5 w-5" />
@@ -1714,6 +1599,7 @@ export function Events() {
           eventFrequencies={eventFrequencies}
           churches={churches}
           eventTypes={eventTypes}
+          churchLocations={churchLocations}
         />
       )}
 
@@ -1725,6 +1611,7 @@ export function Events() {
           eventFrequencies={eventFrequencies}
           churches={churches}
           eventTypes={eventTypes}
+          churchLocations={churchLocations}
         />
       )}
     </div>
