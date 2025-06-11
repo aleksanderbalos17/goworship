@@ -225,25 +225,33 @@ export function Events() {
   };
 
   const formatDateTime = (date: string, time: string, duration: string) => {
-    const eventDate = new Date(date);
-    const formattedDate = eventDate.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    
-    const [hours, minutes] = time.split(':');
-    const timeObj = new Date();
-    timeObj.setHours(parseInt(hours), parseInt(minutes));
-    const formattedTime = timeObj.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    return `${formattedDate} at ${formattedTime} (${duration}min)`;
+  const eventDate = new Date(date);
+
+  // Get weekday (e.g., Sunday)
+  const dayOfWeek = eventDate.toLocaleDateString('en-GB', {
+    weekday: 'long'
+  });
+
+  // Get UK date (e.g., 09/06/2025)
+  const ukFormattedDate = eventDate.toLocaleDateString('en-GB');
+
+  // Parse time and format
+  const [hours, minutes] = time.split(':');
+  const timeObj = new Date();
+  timeObj.setHours(parseInt(hours), parseInt(minutes));
+  const formattedTime = timeObj.toLocaleTimeString('en-GB', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  return {
+    dayOfWeek,
+    ukFormattedDate,
+    timeWithDuration: `${formattedTime} (${duration}min)`
   };
+};
+
 
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -353,10 +361,18 @@ export function Events() {
                   )}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">
-                    {formatDateTime(event.date, event.time, event.duration)}
-                  </div>
-                </td>
+  {(() => {
+    const { dayOfWeek, ukFormattedDate, timeWithDuration } = formatDateTime(event.date, event.time, event.duration);
+    return (
+      <div className="text-sm text-gray-900 space-y-1">
+        <div>{dayOfWeek}</div>
+        <div>{ukFormattedDate}</div>
+        <div>{timeWithDuration}</div>
+      </div>
+    );
+  })()}
+</td>
+
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{event.church_name || '-'}</div>
                   {event.location_name && (
