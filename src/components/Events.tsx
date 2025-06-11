@@ -272,7 +272,11 @@ export function Events() {
     });
 
     // Get UK date (e.g., 09/06/2025)
-    const ukFormattedDate = eventDate.toLocaleDateString("en-GB");
+    const ukFormattedDate = eventDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
     // Parse time and format
     const [hours, minutes] = time.split(":");
